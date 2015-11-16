@@ -16,7 +16,7 @@ from util.codeConvert import *
 class IP_Proxy:
     def __init__(self):
         self.source = 'http://www.haodailiip.com/guonei/page'
-        self.count = 10
+        self.count = 5
         self.ip_items = []
         self.dir_path = '../Data/'
 
@@ -98,4 +98,4 @@ class IPItem:
 if __name__ == "__main__":
     ip_proxy = IP_Proxy()
     ip_proxy.run()
-    print 'sleep'
+   
