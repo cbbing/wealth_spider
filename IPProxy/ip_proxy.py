@@ -98,4 +98,3 @@ class IPItem:
 if __name__ == "__main__":
     ip_proxy = IP_Proxy()
     ip_proxy.run()
-   
