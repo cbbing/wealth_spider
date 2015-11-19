@@ -2,6 +2,7 @@
 
 import MySQLdb
 import ConfigParser
+from selenium import webdriver
 
 class XueQiu:
 
@@ -48,6 +49,13 @@ class XueQiu:
 
     # 获取大V基本信息
     def get_BigV_Info(self):
+        driver = webdriver.PhantomJS()
+        url = 'http://xueqiu.com/3037882447'
+        driver.get(url)
+        driver.get_screenshot_as_file("xueqiu.png")
+
+        driver.quit()
+
         pass
 
     # 获取投资组合
