@@ -10,7 +10,7 @@ sys.setdefaultencoding("utf-8")
 import logging
 import logging.handlers
 import ConfigParser
-from codeConvert import *
+from CodeConvert import *
 
 #用字典保存日志级别
 format_dict = {
