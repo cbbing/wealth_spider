@@ -77,7 +77,7 @@ class XueQiu:
             bigV = User()
             bigV.user_id = id
 
-            soup = BeautifulSoup(self.driver.page_source)
+            soup = BeautifulSoup(self.driver.page_source, 'html5lib')
 
             info = soup.find('div', {'class':'profile_info_content'})
             bigV.name = info.find('span').get_text()
@@ -101,14 +101,14 @@ class XueQiu:
                 capacityDiv = info.find('div', {'class':'item_content discuss_stock_list'})
                 bigV.capacitys = capacityDiv.get_text()
             except Exception,e:
-                print '能力圈不存在'
+                print encode_wrap('能力圈不存在')
 
             try:
                 summaryP = info.find('p', {'class':'detail'})
                 summary = summaryP.get_text()
                 bigV.summary = summary.replace(r'收起', '')
             except Exception,e:
-                print '简介不存在'
+                print encode_wrap('简介不存在')
 
             bigV.update_time = GetNowTime()
 
@@ -138,6 +138,11 @@ class XueQiu:
 
             url = 'http://xueqiu.com/%s' % str(id)
             self.driver.get(url)
+            self.driver.maximize_window()
+
+            siz = self.driver.get_window_size()
+            self.driver.set_window_size(siz['width'], siz['height']*2)
+            print
 
             # 模拟点击“关注”
             self.driver.find_element_by_xpath('//a[@href="#friends_content"]').click()
@@ -173,39 +178,44 @@ class XueQiu:
                 # data_page = (int)(pageA['data-page'])-1
                 print "Page:%d" % (current_page)
 
-                # add friends where follows>1000
-                userAll = soup.find('ul', {'class':'users-list'})
-                userList = userAll.findAll('li')
-                for user in userList:
-                    href = user.find('a')['href'].replace('/', '')
-                    name = user.find('a')['data-name']
-
-                    userInfo = user.find('div', {'class':'userInfo'}).get_text()
-                    m = re.search(u'粉丝(\d+)', userInfo)
-                    if m:
-                        print name, href, m.group(0)
-                        fans_count = int(m.group(1))
-                        if fans_count >= 1000:
-                            followList.append((name, href))
-
                 try:
-                    UserListElement = self.driver.find_element_by_xpath('//ul[@class="users-list"]')
-                    btn_nexts = UserListElement.find_elements_by_xpath('//ul[@class="pager"]//a[@data-page="%d"]' % current_page)
+                    # add friends where follows>1000
 
-                    #NextElement = UserListElement.find_element_by_xpath('//li[@class="next"]')
-                    #btn_nexts = NextElement.find_elements_by_xpath('//a[@data-page="%d"]' % current_page)
+                    userAll = soup.find('ul', {'class':'users-list'})
+                    userList = userAll.findAll('li')
+                    for user in userList:
+                        href = user.find('a')['href'].replace('/', '')
+                        name = user.find('a')['data-name']
 
-                    for btn_next in btn_nexts:
-                        if btn_next.is_displayed():
-                            btn_next.click()
-                            print 'click follows page:%d' % current_page
-                            break
-                        else:
-                            print 'next button  no show'
+                        userInfo = user.find('div', {'class':'userInfo'}).get_text()
+                        m = re.search(u'粉丝(\d+)', userInfo)
+                        if m:
+                            print encode_wrap(name), href, encode_wrap(m.group(0))
+                            fans_count = int(m.group(1))
+                            if fans_count >= 1000:
+                                followList.append((name, href))
 
-                    soup = BeautifulSoup(self.driver.page_source, 'html5lib')
-                    current_page += 1
+                    try:
+                        UserListElement = self.driver.find_element_by_xpath('//ul[@class="users-list"]')
+                        btn_nexts = UserListElement.find_elements_by_xpath('//ul[@class="pager"]//a[@data-page="%d"]' % current_page)
 
+                        #NextElement = UserListElement.find_element_by_xpath('//li[@class="next"]')
+                        #btn_nexts = NextElement.find_elements_by_xpath('//a[@data-page="%d"]' % current_page)
+
+                        for btn_next in btn_nexts:
+                            if btn_next.is_displayed():
+                                btn_next.click()
+                                print 'click follows page:%d' % current_page
+                                break
+                            else:
+                                print 'next button  no show'
+
+                        soup = BeautifulSoup(self.driver.page_source, 'html5lib')
+                        current_page += 1
+
+                    except Exception,e:
+                        print e
+                        break
                 except Exception,e:
                     print e
                     break
@@ -253,7 +263,7 @@ class User:
                 if len(df_query) > 0:
                     return False
             except Exception,e:
-                print '表格不存在', e
+                print encode_wrap('表格不存在'), e
 
             df = DataFrame({'user_id':[self.user_id],
                             'name':[self.name],
@@ -275,13 +285,13 @@ class User:
 
 if __name__ == "__main__":
     xueqiu = XueQiu()
-    init_id = 'ibaina'
+    init_id ='knj0700' # 'ibaina'
     xueqiu.get_BigV_Info(init_id)
     follow_list = xueqiu.get_follow_list(init_id)
 
     search_floor = 1 # 搜索级数
     while(len(follow_list) > 0):
-        s_xueqiu = GetNowTime() + '  递归级数:%d' % search_floor
+        s_xueqiu = GetNowTime() + encode_wrap('  递归级数:%d' % search_floor)
         print s_xueqiu
         f = open('xueqiu.log','w')
         f.write(s_xueqiu)

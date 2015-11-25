@@ -19,7 +19,7 @@ host_mysql = '127.0.0.1' # '101.200.183.216'
 db_name_mysql = 'wealth_db'
 port_mysql = '3307'
 if platform.system() == 'Windows':
-    host_mysql = 'localhost'
+    #host_mysql = 'localhost'
     port_mysql = '3306'
 
 user_mysql = 'root'
