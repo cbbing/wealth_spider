@@ -16,7 +16,7 @@ from util.CodeConvert import *
 class IP_Proxy:
     def __init__(self):
         self.source = 'http://www.haodailiip.com/guonei/page'
-        self.count = 5
+        self.count = 10
         self.ip_items = []
         self.dir_path = '../Data/'
 
@@ -37,8 +37,9 @@ class IP_Proxy:
                     item.ip = each_data[0].get_text().strip()
                     item.port = each_data[1].get_text().strip()
                     item.addr = each_data[2].get_text().strip()
-                    item.tpye = each_data[3].get_text().strip()
-                    self.ip_items.append(item)
+                    item.type = each_data[3].get_text().strip()
+                    if item.type.lower() == "http" or item.type.lower() == "https":
+                        self.ip_items.append(item)
         except Exception,e:
             print e
 
@@ -62,7 +63,7 @@ class IP_Proxy:
         df = DataFrame({'IP':[item.ip for item in self.ip_items],
                         'Port':[item.port for item in self.ip_items],
                         'Addr':[item.addr for item in self.ip_items],
-                        'Type':[item.tpye for item in self.ip_items],
+                        'Type':[item.type for item in self.ip_items],
                         'Speed':[item.speed for item in self.ip_items]
                         }, columns=['IP', 'Port', 'Addr', 'Type', 'Speed'])
         print df[:10]
@@ -70,7 +71,6 @@ class IP_Proxy:
         df = df.sort_index(by='Speed')
 
         now_data = GetNowDate()
-
 
         file_name = self.dir_path +'ip_proxy_' + now_data + '.xlsx'
 
@@ -92,7 +92,7 @@ class IPItem:
         self.ip = ''    # IP
         self.port = ''  # Port
         self.addr = ''  # 位置
-        self.tpye = ''  #类型:http; https
+        self.type = ''  #类型:http; https
         self.speed = -1 #速度
 
 if __name__ == "__main__":
