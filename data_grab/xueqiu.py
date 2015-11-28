@@ -14,9 +14,12 @@ import pandas as pd
 from pandas import DataFrame
 import requests
 import random
+from multiprocessing.dummy import Pool as ThreadPool
+from multiprocessing import Pool
 
 from util.CodeConvert import *
 from db_config import *
+from IPProxy.ip_proxy import IP_Proxy
 
 
 
@@ -24,8 +27,16 @@ class XueQiu:
 
     def __init__(self):
         #self.driver = webdriver.Firefox()
-        self.df_ip = pd.read_excel('../Data/ip_proxy_2015-11-25.xlsx','Sheet1') #ip代理地址库
-        pass
+        #self.df_ip = pd.read_excel('../Data/ip_proxy_2015-11-25.xlsx','Sheet1') #ip代理地址库
+
+        ip_file = "../Data/ip_proxy_%s.csv" % GetNowDate()
+        try:
+            self.df_ip = pd.read_csv(ip_file)
+        except:
+            print 'not exist:%s, get it now!' % ip_file
+            ip_proxy = IP_Proxy()
+            ip_proxy.run()
+            self.df_ip = pd.read_csv(ip_file)
 
         #self.init_database()
 
@@ -64,6 +75,13 @@ class XueQiu:
 
         except MySQLdb.Error,e:
              print "Mysql Error %d: %s" % (e.args[0], e.args[1])
+
+    # 更新IP代理库
+    def update_ip_data(self):
+        ip_file = "../Data/ip_proxy_%s.csv" % GetNowDate()
+        ip_proxy = IP_Proxy()
+        ip_proxy.run()
+        self.df_ip = pd.read_csv(ip_file)
 
     # 获取IP代理地址(随机)
     def get_proxies(self):
@@ -112,7 +130,7 @@ class XueQiu:
         bigV.user_id = id
         if bigV.check_exists():
             print encode_wrap("id:%s 已经在数据库中" % id)
-            #return
+            return
 
         try:
             url = 'http://xueqiu.com/%s' % str(id)
@@ -120,17 +138,18 @@ class XueQiu:
 
             headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/31.0.1650.57 Safari/537.36'}
             proxies = self.get_proxies()
-            print '获取大V信息,使用代理:', proxies
+            print encode_wrap( '获取大V信息,使用代理:'), proxies
             try:
                 r = requests.get(url, headers=headers, proxies=proxies, timeout=5)
             except:
                 try:
                     proxies = self.get_proxies()
-                    print '连接超时,更换IP >>> 获取大V信息,使用代理:', proxies
+                    print encode_wrap( '连接超时,更换IP >>> 获取大V信息,使用代理:'), proxies
                     r = requests.get(url, headers=headers, proxies=proxies, timeout=5)
                 except:
-                    print '连接超时,下次不使用代理 >>> 获取大V信息,不使用代理:', proxies
-                    r = requests.get(url, headers=headers, timeout=5)
+                    proxies = self.get_proxies()
+                    print encode_wrap( '连接超时,更换IP >>> 获取大V信息,使用代理:'), proxies
+                    r = requests.get(url, headers=headers, proxies=proxies, timeout=5)
 
             soup = BeautifulSoup(r.text, 'html5lib')
 
@@ -197,6 +216,21 @@ class XueQiu:
     # 获取关注列表
     def get_follow_list(self, id):
         try:
+            #过滤已走路径
+            query = "select follow_search_time from %s where user_id='%s'" % (big_v_table_mysql, id )
+            df_query = pd.read_sql_query(query, engine)
+            if len(df_query) > 0 :
+                data = df_query.ix[0, 'follow_search_time']
+                if not data is None and len(df_query.ix[0, 'follow_search_time']) > 0:
+                    print 'have get follow (%s)' % id
+                    return
+
+            # 定期更换IP代理库
+            hour_now = time.strftime("%H",time.localtime(time.time()))
+            if hour_now in ['09', '21']:
+                print '更换IP代理库'
+                self.update_ip_data()
+
 
             url = 'http://xueqiu.com/%s' % str(id)
             try:
@@ -210,8 +244,9 @@ class XueQiu:
                     driver.get(url)
                 except:
                     driver.quit()
-                    print encode_wrap("超时2>>>不使用代理")
-                    driver = webdriver.Firefox()
+                    print encode_wrap("超时2>>>使用代理")
+                    driver = self.get_web_driver()
+                    #driver = webdriver.Firefox()
                     driver.get(url)
 
             driver.maximize_window()
@@ -268,7 +303,7 @@ class XueQiu:
                             print encode_wrap(name), href, encode_wrap(m.group(0))
                             fans_count = int(m.group(1))
                             if fans_count >= 1000:
-                                followList.append((name, href))
+                                followList.append(href)
 
                     # 点击下一页
                     try:
@@ -300,16 +335,25 @@ class XueQiu:
             print 'fans count:', len(followList)
             driver.quit()
 
+            # 标记已搜寻关注列表
+            sql = 'update %s set follow_search_time = "%s" where user_id = "%s"' % (big_v_table_mysql, GetNowTime(), id)
+            engine.execute(sql)
+
 
             # 获取关注的大V的信息
-            for follow in followList:
-                self.get_BigV_Info(follow[1])
+            #多线程
+            pool = ThreadPool(processes=4)
+            pool.map(self.get_BigV_Info, followList)
+            pool.close()
+            pool.join()
+
+            # for follow in followList:
+            #     self.get_BigV_Info(follow)
 
             return followList
 
 
         except Exception,e:
-            driver.quit()
             print e
             return []
 
@@ -334,6 +378,8 @@ class User:
             df_query = pd.read_sql_query(query_sql, engine)
             if len(df_query) > 0:
                 return True
+            else:
+                return False
 
         except Exception,e:
             print encode_wrap('数据库中表不存在:%s' % big_v_table_mysql)
@@ -365,24 +411,26 @@ class User:
 
 if __name__ == "__main__":
     xueqiu = XueQiu()
-    init_id ='1437016884' # 'ibaina'
+    init_id ='7535271733' # 'ibaina'
     xueqiu.get_BigV_Info(init_id)
 
-
-
     follow_list = xueqiu.get_follow_list(init_id)
+    if follow_list is None:
+        print encode_wrap('已查询过关注列表,程序退出')
+        exit(0)
 
     search_floor = 1 # 搜索级数
     while(len(follow_list) > 0):
         s_xueqiu = GetNowTime() + encode_wrap('  递归级数:%d' % search_floor)
         print s_xueqiu
-        f = open('xueqiu.log','w')
-        f.write(s_xueqiu)
+        f = open('xueqiu.log','a')
+        f.write(s_xueqiu + '\n')
         f.close()
 
         f_list_all= []
-        for _, follow_id in follow_list:
+        for follow_id in follow_list:
             f_list = xueqiu.get_follow_list(follow_id)
-            f_list_all.extend(f_list)
+            if not f_list is None:
+                f_list_all.extend(f_list)
         follow_list = f_list_all
         search_floor += 1
