@@ -21,19 +21,8 @@ engine = create_engine('mysql+mysqldb://%s:%s@%s:%s/%s' % (user_mysql, pwd_mysql
 big_v_table_mysql = 'big_v_table'
 fans_in_big_v_table_mysql = 'fans_in_big_v_table'
 
-#
-# # 短均线， 长均线
-# AVR_SHORT = 12
-# AVR_LONG = 40
-#
-# #买卖标记
-# SIGNAL_BUY = 1  #买
-# SIGNAL_SALE = -1 #卖
-# SIGNAL_DEFAULT = 0
-#
-# #阈值
-# Threshold_Buy_Count = 3
-# Threshold_Sale_Count = 2
+unfinish_big_v_table_mysql = "unfinish_big_v_table"
+
 #
 # #日志设置
 # from util.MyLogger import Logger

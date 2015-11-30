@@ -11,7 +11,7 @@ from selenium.webdriver.common.proxy import *
 from bs4 import BeautifulSoup
 import re
 import pandas as pd
-from pandas import DataFrame
+from pandas import DataFrame, Series
 import requests
 import random
 from multiprocessing.dummy import Pool as ThreadPool
@@ -217,6 +217,9 @@ class XueQiu:
             bigV.to_mysql()
 
         except Exception,e:
+            se = Series([id, GetNowTime(), str(e)], index=['user_id', 'fail_time', 'fail_reason'])
+            df = DataFrame(se).T
+            df.to_sql(unfinish_big_v_table_mysql, engine, if_exists='append', index=False)
             print e
 
 
