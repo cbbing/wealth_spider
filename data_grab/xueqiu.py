@@ -38,6 +38,8 @@ class XueQiu:
             ip_proxy.run()
             self.df_ip = pd.read_csv(ip_file)
 
+        self.init_time = time.time()
+
         #self.init_database()
 
     def init_database(self):
@@ -226,10 +228,11 @@ class XueQiu:
                     return
 
             # 定期更换IP代理库
-            hour_now = time.strftime("%H",time.localtime(time.time()))
-            if hour_now in ['09', '21']:
+            s1 = time.time()
+            if (s1 - self.init_time) > 8 * 60 * 60:
                 print '更换IP代理库'
                 self.update_ip_data()
+                self.init_time = time.time()
 
 
             url = 'http://xueqiu.com/%s' % str(id)
@@ -410,8 +413,16 @@ class User:
             return False
 
 if __name__ == "__main__":
+
+    # query_sql = "select distinct user_id, name, sex,area,stock_count, talk_count,fans_count,big_v_in_fans_count," \
+    #             "follows_count,capacitys, summary, follow_search_time, update_time from %s" % (big_v_table_mysql)
+    # df_query = pd.read_sql_query(query_sql, engine)
+    # print len(df_query)
+    # print df_query[:10]
+    #df_query[25000:].to_sql(big_v_table_mysql+'_tmp', engine, if_exists='append', index=False)
+
     xueqiu = XueQiu()
-    init_id ='7535271733' # 'ibaina'
+    init_id ='1437016884' # 'ibaina'
     xueqiu.get_BigV_Info(init_id)
 
     follow_list = xueqiu.get_follow_list(init_id)
