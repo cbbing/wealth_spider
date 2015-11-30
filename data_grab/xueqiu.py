@@ -360,6 +360,19 @@ class XueQiu:
             print e
             return []
 
+    # 获取粉丝中的大V
+    def get_big_v_in_fans(self):
+
+        sql = 'select user_id, big_v_in_fans_count from %s' % (big_v_table_mysql)
+        df = pd.read_sql_query(sql, engine)
+
+        for row in df.iterrows():
+            print row['user_id']
+
+    #
+
+    #
+
 class User:
     def __init__(self):
         self.user_id = ''
