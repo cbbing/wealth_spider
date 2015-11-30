@@ -318,29 +318,28 @@ class XueQiu:
                                 followList.append(href)
 
                     # 点击下一页
-                    if current_page < page_count:
-                        try:
-                            UserListElement = driver.find_element_by_xpath('//ul[@class="users-list"]')
-                            btn_nexts = UserListElement.find_elements_by_xpath('//ul[@class="pager"]//a[@data-page="%d"]' % current_page)
+                    try:
+                        UserListElement = driver.find_element_by_xpath('//ul[@class="users-list"]')
+                        btn_nexts = UserListElement.find_elements_by_xpath('//ul[@class="pager"]//a[@data-page="%d"]' % current_page)
 
-                            #NextElement = UserListElement.find_element_by_xpath('//li[@class="next"]')
-                            #btn_nexts = NextElement.find_elements_by_xpath('//a[@data-page="%d"]' % current_page)
+                        #NextElement = UserListElement.find_element_by_xpath('//li[@class="next"]')
+                        #btn_nexts = NextElement.find_elements_by_xpath('//a[@data-page="%d"]' % current_page)
 
-                            for btn_next in btn_nexts:
-                                if btn_next.is_displayed():
-                                    btn_next.click()
-                                    print 'click follows page:%d' % current_page
-                                    break
-                                else:
-                                    print 'next button  no show'
+                        for btn_next in btn_nexts:
+                            if btn_next.is_displayed():
+                                btn_next.click()
+                                print 'click follows page:%d' % current_page
+                                break
+                            else:
+                                print 'next button  no show'
 
-                            soup = BeautifulSoup(driver.page_source, 'html5lib')
-                            current_page += 1
-                            time.sleep(3)
+                        soup = BeautifulSoup(driver.page_source, 'html5lib')
+                        current_page += 1
+                        time.sleep(3)
 
-                        except Exception,e:
-                            print e
-                            break
+                    except Exception,e:
+                        print e
+                        break
                 except Exception,e:
                     print e
                     break
