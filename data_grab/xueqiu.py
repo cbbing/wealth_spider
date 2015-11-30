@@ -306,7 +306,7 @@ class XueQiu:
                             print encode_wrap(name), href, encode_wrap(m.group(0))
                             fans_count = int(m.group(1))
                             if fans_count >= 1000:
-                                followList.append(href)
+                                followList.append(href,,)
 
                     # 点击下一页
                     try:
@@ -427,12 +427,12 @@ class User:
 
 if __name__ == "__main__":
 
-    # query_sql = "select distinct user_id, name, sex,area,stock_count, talk_count,fans_count,big_v_in_fans_count," \
+    # query_sql = "select user_id, name, sex,area,stock_count, talk_count,fans_count,big_v_in_fans_count," \
     #             "follows_count,capacitys, summary, follow_search_time, update_time from %s" % (big_v_table_mysql)
     # df_query = pd.read_sql_query(query_sql, engine)
     # print len(df_query)
     # print df_query[:10]
-    #df_query[25000:].to_sql(big_v_table_mysql+'_tmp', engine, if_exists='append', index=False)
+    # df_query.to_sql(big_v_table_mysql+'_back151130', engine, if_exists='append', index=False)
 
     xueqiu = XueQiu()
     init_id ='1437016884' # 'ibaina'

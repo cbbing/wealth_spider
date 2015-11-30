@@ -5,15 +5,6 @@ import platform, os, sys
 from sqlalchemy import create_engine
 from util.MyLogger import Logger
 
-#DB_WAY:数据存储方式 'csv'  # or 'mysql' or 'redis' or 'sqlite'
-DB_WAY = 'mysql'
-DB_USER = 'root'
-DB_PWD = 'root' # or '123456' in win7
-DB_NAME = 'stock'
-
-
-DownloadDir = os.path.pardir + '/stockdata/' # os.path.pardir: 上级目录
-
 # mysql Host
 host_mysql = '127.0.0.1' # '101.200.183.216'
 db_name_mysql = 'wealth_db'
@@ -28,6 +19,7 @@ pwd_mysql = 'root'
 engine = create_engine('mysql+mysqldb://%s:%s@%s:%s/%s' % (user_mysql, pwd_mysql, host_mysql, port_mysql, db_name_mysql), connect_args={'charset':'utf8'})
 
 big_v_table_mysql = 'big_v_table'
+fans_in_big_v_table_mysql = 'fans_in_big_v_table'
 
 #
 # # 短均线， 长均线
