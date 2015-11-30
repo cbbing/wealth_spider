@@ -90,7 +90,7 @@ class XueQiu:
 
         if len(self.df_ip) > 0:
             print len(self.df_ip)
-            index = random.randint(0, 2*len(self.df_ip)/3)
+            index = random.randint(0, len(self.df_ip))
             http = self.df_ip.ix[index, 'Type']
             http = str(http).lower()
             ip = self.df_ip.ix[index, 'IP']
@@ -102,31 +102,65 @@ class XueQiu:
             return {}
 
     def get_web_driver(self):
-        try:
-            proxies = self.get_proxies()
-            if proxies.has_key('http'):
-                myProxy = proxies['http']
-            elif proxies.has_key('https'):
-                myProxy = proxies['https']
-
-            proxy = Proxy({
-               'proxyType': ProxyType.MANUAL,
-                'httpProxy': myProxy,
-                'ftpProxy': myProxy,
-                'sslProxy': myProxy,
-                'noProxy': ''
-            })
-            driver = webdriver.Firefox(proxy=proxy)
-            driver.set_page_load_timeout(10)
-            print encode_wrap("使用代理:"), myProxy
-        except Exception,e:
-            print '没使用代理!'
-            driver = webdriver.Firefox()
+        driver = webdriver.Firefox()
         return driver
+
+        # try_times = 3
+        # while (try_times > 0):
+        #
+        #     try:
+        #         proxies = self.get_proxies()
+        #         if proxies.has_key('http'):
+        #             myProxy = proxies['http']
+        #         elif proxies.has_key('https'):
+        #             myProxy = proxies['https']
+        #
+        #         proxy = Proxy({
+        #            'proxyType': ProxyType.MANUAL,
+        #             'httpProxy': myProxy,
+        #             'ftpProxy': myProxy,
+        #             'sslProxy': myProxy,
+        #             'noProxy': ''
+        #         })
+        #         driver = webdriver.Firefox(proxy=proxy)
+        #         driver.set_page_load_timeout(10)
+        #         print encode_wrap("使用代理:"), myProxy
+        #         return driver
+        #     except Exception,e:
+        #         print encode_wrap('连接超时, 重试%s' % (3 - try_times + 1))
+        #         try_times -= 1
+        #
+        # return None
+
+
+    def get_request(self, url):
+
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/31.0.1650.57 Safari/537.36'}
+
+        try_times = 3
+        while (try_times > 0):
+
+            proxies = self.get_proxies()
+            print encode_wrap( '获取大V信息:%s:使用代理:' % url), proxies
+            try:
+                r = requests.get(url, headers=headers, proxies=proxies, timeout=5)
+                return r
+            except:
+                if proxies.has_key('http'):
+                    myProxy = proxies['http']
+                elif proxies.has_key('https'):
+                    myProxy = proxies['https']
+                m =re.search('//([\d\.]+):', myProxy)
+                if m:
+                    ip = m.group(1)
+                    #self.df_ip
+
+                print encode_wrap('连接超时, 重试%s' % (3 - try_times + 1))
+                try_times -= 1
+
 
     # 获取大V基本信息
     def get_BigV_Info(self, id):
-
 
         bigV = User()
         bigV.user_id = id
@@ -137,22 +171,7 @@ class XueQiu:
         try:
             url = 'http://xueqiu.com/%s' % str(id)
             print url
-
-            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/31.0.1650.57 Safari/537.36'}
-            proxies = self.get_proxies()
-            print encode_wrap( '获取大V信息,使用代理:'), proxies
-            try:
-                r = requests.get(url, headers=headers, proxies=proxies, timeout=5)
-            except:
-                try:
-                    proxies = self.get_proxies()
-                    print encode_wrap( '连接超时,更换IP >>> 获取大V信息,使用代理:'), proxies
-                    r = requests.get(url, headers=headers, proxies=proxies, timeout=5)
-                except:
-                    proxies = self.get_proxies()
-                    print encode_wrap( '连接超时,更换IP >>> 获取大V信息,使用代理:'), proxies
-                    r = requests.get(url, headers=headers, proxies=proxies, timeout=5)
-
+            r = self.get_request(url)
             soup = BeautifulSoup(r.text, 'html5lib')
 
             info = soup.find('div', {'class':'profile_info_content'})
@@ -236,21 +255,8 @@ class XueQiu:
 
 
             url = 'http://xueqiu.com/%s' % str(id)
-            try:
-                driver = self.get_web_driver()
-                driver.get(url)
-            except Exception,e:
-                driver.quit()
-                print encode_wrap("超时1>>>更换代理")
-                try:
-                    driver = self.get_web_driver()
-                    driver.get(url)
-                except:
-                    driver.quit()
-                    print encode_wrap("超时2>>>使用代理")
-                    driver = self.get_web_driver()
-                    #driver = webdriver.Firefox()
-                    driver.get(url)
+            driver = self.get_web_driver()
+            driver.get(url)
 
             driver.maximize_window()
             siz = driver.get_window_size()
@@ -261,9 +267,9 @@ class XueQiu:
             driver.find_element_by_xpath('//a[@href="#friends_content"]').click()
 
 
-            f = open('show.html','w')
-            f.write(driver.page_source)
-            f.close()
+            # f = open('show.html','w')
+            # f.write(driver.page_source)
+            # f.close()
 
             # 获取关注的总页码
             try:
@@ -306,31 +312,32 @@ class XueQiu:
                             print encode_wrap(name), href, encode_wrap(m.group(0))
                             fans_count = int(m.group(1))
                             if fans_count >= 1000:
-                                followList.append(href,,)
+                                followList.append(href)
 
                     # 点击下一页
-                    try:
-                        UserListElement = driver.find_element_by_xpath('//ul[@class="users-list"]')
-                        btn_nexts = UserListElement.find_elements_by_xpath('//ul[@class="pager"]//a[@data-page="%d"]' % current_page)
+                    if current_page < page_count:
+                        try:
+                            UserListElement = driver.find_element_by_xpath('//ul[@class="users-list"]')
+                            btn_nexts = UserListElement.find_elements_by_xpath('//ul[@class="pager"]//a[@data-page="%d"]' % current_page)
 
-                        #NextElement = UserListElement.find_element_by_xpath('//li[@class="next"]')
-                        #btn_nexts = NextElement.find_elements_by_xpath('//a[@data-page="%d"]' % current_page)
+                            #NextElement = UserListElement.find_element_by_xpath('//li[@class="next"]')
+                            #btn_nexts = NextElement.find_elements_by_xpath('//a[@data-page="%d"]' % current_page)
 
-                        for btn_next in btn_nexts:
-                            if btn_next.is_displayed():
-                                btn_next.click()
-                                print 'click follows page:%d' % current_page
-                                break
-                            else:
-                                print 'next button  no show'
+                            for btn_next in btn_nexts:
+                                if btn_next.is_displayed():
+                                    btn_next.click()
+                                    print 'click follows page:%d' % current_page
+                                    break
+                                else:
+                                    print 'next button  no show'
 
-                        soup = BeautifulSoup(driver.page_source, 'html5lib')
-                        current_page += 1
-                        time.sleep(3)
+                            soup = BeautifulSoup(driver.page_source, 'html5lib')
+                            current_page += 1
+                            time.sleep(3)
 
-                    except Exception,e:
-                        print e
-                        break
+                        except Exception,e:
+                            print e
+                            break
                 except Exception,e:
                     print e
                     break
@@ -353,6 +360,9 @@ class XueQiu:
             # for follow in followList:
             #     self.get_BigV_Info(follow)
 
+            # 粉丝中的大V列表
+            self.get_big_v_in_fans(followList, id)
+
             return followList
 
 
@@ -361,17 +371,20 @@ class XueQiu:
             return []
 
     # 获取粉丝中的大V
-    def get_big_v_in_fans(self):
+    def get_big_v_in_fans(self, followList, id):
 
-        sql = 'select user_id, big_v_in_fans_count from %s' % (big_v_table_mysql)
-        df = pd.read_sql_query(sql, engine)
+        try:
+            df = DataFrame({'user_id':followList, #被关注者
+                            'fans_id':id                            #关注者
+                            }, columns=['user_id', 'fans_id'])
+            print df
+            df.to_sql(fans_in_big_v_table_mysql, engine, if_exists='append', index=False)
 
-        for row in df.iterrows():
-            print row['user_id']
+        except Exception,e:
+            print e
 
-    #
 
-    #
+
 
 class User:
     def __init__(self):
@@ -412,12 +425,16 @@ class User:
                             'stock_count':[self.stock_count],
                             'talk_count':[self.talk_count],
                             'fans_count':[self.fans_count],
+                            'big_v_in_fans_count':0,
+                            'follows_count':0,
                             'capacitys':[self.capacitys],
                             'summary':[self.summary],
+                            'follow_search_time':'',
                             'update_time':[self.update_time]
                             },
                            columns=['user_id', 'name', 'sex', 'area', 'stock_count', 'talk_count',
-                                    'fans_count', 'capacitys', 'summary', 'update_time'])
+                                    'fans_count', 'big_v_in_fans_count', 'follows_count', 'capacitys',
+                                    'summary', 'follow_search_time', 'update_time'])
             print df
             df.to_sql(big_v_table_mysql, engine, if_exists='append', index=False)
             return True
@@ -435,7 +452,7 @@ if __name__ == "__main__":
     # df_query.to_sql(big_v_table_mysql+'_back151130', engine, if_exists='append', index=False)
 
     xueqiu = XueQiu()
-    init_id ='1437016884' # 'ibaina'
+    init_id ='3037882447' # 'ibaina'
     xueqiu.get_BigV_Info(init_id)
 
     follow_list = xueqiu.get_follow_list(init_id)
