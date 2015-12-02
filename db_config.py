@@ -18,6 +18,7 @@ pwd_mysql = 'root'
 
 engine = create_engine('mysql+mysqldb://%s:%s@%s:%s/%s' % (user_mysql, pwd_mysql, host_mysql, port_mysql, db_name_mysql), connect_args={'charset':'utf8'})
 
+archive_table_mysql = 'archive_table'
 big_v_table_mysql = 'big_v_table'
 fans_in_big_v_table_mysql = 'fans_in_big_v_table'
 

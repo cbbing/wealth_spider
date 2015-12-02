@@ -46,6 +46,9 @@ class XueQiu:
 
         self.init_time = time.time()
 
+        self.site = 'http://xueqiu.com'
+        self.sleep_time = 3  # second
+
         #self.init_database()
 
     def init_database(self):
@@ -240,9 +243,7 @@ class XueQiu:
     def get_Concerned_Stock_List(self):
         pass
 
-    # 获取发布文章列表
-    def get_publish_articles(self):
-        pass
+
 
     # 获取关注列表
     def get_follow_list(self, id):
@@ -272,29 +273,16 @@ class XueQiu:
             siz = driver.get_window_size()
             driver.set_window_size(siz['width'], siz['height']*2)
 
-
             # 模拟点击“关注”
             driver.find_element_by_xpath('//a[@href="#friends_content"]').click()
-
 
             # f = open('show.html','w')
             # f.write(driver.page_source)
             # f.close()
 
             # 获取关注的总页码
-            try:
-                soup = BeautifulSoup(driver.page_source, 'html5lib')
-                friendsDiv = soup.find('div', {'id':'friends_content'})
-                pagerUL = friendsDiv.find('ul', {'class':'pager'})
-                data_pages = pagerUL.find_all('a')
-                page_count = 0
-                for a in data_pages:
-                    cur_count = (int)(a['data-page'])
-                    if cur_count > page_count:
-                        page_count = cur_count
-            except Exception,e:
-                # 只有一页
-                page_count = 1
+            soup = BeautifulSoup(driver.page_source, 'html5lib')
+            page_count = self.get_page_count(soup, 'friends_content')
 
             #page_count = 1
 
@@ -305,7 +293,7 @@ class XueQiu:
                 # pageLi = soup.find('li', {'class':'next'})
                 # pageA = pageLi.find('a')
                 # data_page = (int)(pageA['data-page'])-1
-                print "Page:%d" % (current_page)
+                print "Page:%d / %d" % (current_page, page_count)
 
                 try:
                     # add friends where follows>1000
@@ -379,6 +367,52 @@ class XueQiu:
             print e
             return []
 
+
+    # 获取发布文章列表
+    def get_publish_articles(self, id):
+        url = 'http://xueqiu.com/%s' % str(id)
+        driver = self.get_web_driver()
+        driver.get(url)
+
+        driver.maximize_window()
+        siz = driver.get_window_size()
+        driver.set_window_size(siz['width'], siz['height']*2)
+
+        # 模拟点击“主贴”,切换到"原发布"
+        driver.find_element_by_xpath('//a[@href="#status_content"]').click()
+        time.sleep(1)
+        driver.find_element_by_xpath('//a[@href="#status_content" and @data-text="原发布"]').click()
+
+        # 获取原发布的总页码
+        soup = BeautifulSoup(driver.page_source, 'html5lib')
+        page_count = self.get_page_count(soup, 'statusLists')
+
+        # 获取每页文章列表
+        current_page = 1
+        while(current_page < page_count+1):
+            print "Page:%d / %d" % (current_page, page_count)
+
+            archiveList = self.get_archive_list_in_one_page(soup, id)
+
+            # 存入mysql
+            [archive.to_mysql() for archive in archiveList if not archive.check_exists()]
+
+            # 点击下一页
+            clickStatus = self.click_next_page(driver,'//ul[@class="status-list"]', current_page)
+            if clickStatus:
+                soup = BeautifulSoup(driver.page_source, 'html5lib')
+                current_page += 1
+                time.sleep(self.sleep_time)
+            else:
+                print encode_wrap('点击下一页出错, 退出...')
+                break
+
+
+
+
+
+
+
     # 获取粉丝中的大V
     def get_big_v_in_fans(self, followList, id):
 
@@ -404,6 +438,88 @@ class XueQiu:
             if result:
                 engine.execute("delete from %s where user_id='%s'" % (unfinish_big_v_table_mysql, user_id))
                 print encode_wrap('删除未完成列表的user_id')
+
+    ### 类中的辅助函数
+
+    # 获取总页码
+    def get_page_count(self, soup, tpye_id):
+
+        try:
+            friendsDiv = soup.find('div', {'id':tpye_id})
+            pagerUL = friendsDiv.find('ul', {'class':'pager'})
+            data_pages = pagerUL.find_all('a')
+            page_count = 0
+            for a in data_pages:
+                cur_count = (int)(a['data-page'])
+                if cur_count > page_count:
+                    page_count = cur_count
+        except Exception,e:
+            # 只有一页
+            page_count = 1
+        return  page_count
+
+
+    # 点击下一页
+    def click_next_page(self, driver, xpath,  current_page):
+        try:
+            UserListElement = driver.find_element_by_xpath(xpath)
+            # btn_nexts 找不到唯一的,但只有一个按钮显示,故依次点击,点击成功就马上返回
+            btn_nexts = UserListElement.find_elements_by_xpath('//ul[@class="pager"]//a[@data-page="%d"]' % current_page)
+
+            for btn_next in btn_nexts:
+                if btn_next.is_displayed():
+                    btn_next.click()
+                    print 'click follows page:%d' % current_page
+                    return True
+                else:
+                     print 'next button  no show'
+        except Exception,e:
+            print e
+            return False
+
+        return False
+
+    # 获取一页中的文章列表
+    def get_archive_list_in_one_page(self, soup, id):
+
+        archiveList = []
+
+        statusAll = soup.find('ul', {'class':'status-list'})
+        statusList = statusAll.findAll('li')
+        for status in statusList:
+
+            try:
+
+                archive = Article()
+                archive.user_id = id
+
+                archive.detail = status.find('div', {'class':'detail'}).get_text()
+                infos = status.find('div', {'class':'infos'})
+                archive.publish_time = archive.regularization_time(infos.find('a', {'class':'time'}).get_text())
+                archive.device = infos.find('span').get_text().replace('来自', '')
+
+                try:
+                    # 若存在标题
+                    titleH4 = status.find('h4')
+                    archive.title = titleH4.find('a').get_text()
+                    archive.href = self.site + titleH4.find('a')['href']
+                except:
+                    print 'no title and href'
+
+                ops = status.find('div', {'class':'ops'})
+                repost = ops.find('a', {'class':'repost second'}).get_text()
+                donate = ops.find('a', {'class':'donate'}).get_text()
+                comment = ops.find('a', {'class':'statusComment last'}).get_text()
+                archive.repost_count = repost.replace('转发', '').replace('(','').replace(')','')
+                archive.donate_count = donate.replace('赞助', '').replace('(','').replace(')','')
+                archive.comment_count = comment.replace('评论', '').replace('(','').replace(')','')
+
+                archiveList.append(archive)
+
+            except Exception, e:
+                print e
+
+        return archiveList
 
 
 class User:
@@ -462,17 +578,79 @@ class User:
             print e
             return False
 
+# 文章
+class Article:
+    def __init__(self):
+        self.user_id = ''
+        self.title = ''
+        self.detail = ''
+        self.publish_time = ''
+        self.device = ''
+        self.href = ''
+        self.repost_count = 0  # 转发数
+        self.donate_count = 0  # 赞助数
+        self.comment_count = 0 # 评论数
+
+
+
+    # 检测id是否已经存在于数据库中
+    def check_exists(self):
+
+        try:
+            query_sql = "select * from %s where user_id='%s' and publish_time='%s'" % (archive_table_mysql, self.user_id, self.publish_time)
+            df_query = pd.read_sql_query(query_sql, engine)
+            if len(df_query) > 0:
+                return True
+            else:
+                return False
+
+        except Exception,e:
+            print encode_wrap('数据库中表不存在:%s' % big_v_table_mysql)
+            return False
+
+    # 规整化发表时间
+    def regularization_time(self, publish_time):
+        now = GetNowDate()
+        if '今天' in publish_time:
+            publish_time = publish_time.replace('今天', now)
+        elif len(publish_time) == 11:
+            publish_time = time.strftime("%Y-",time.localtime(time.time())) + publish_time
+
+        return publish_time
+
+
+    def to_mysql(self):
+
+        try:
+
+            df = DataFrame({'user_id':[self.user_id],
+                            'title':[self.title],
+                            'detail': [self.detail],
+                            'publish_time':[self.publish_time],
+                            'device':[self.device],
+                            'href':[self.href],
+                            'repost_count':[self.repost_count],
+                            'donate_count':[self.donate_count],
+                            'comment_count':[self.comment_count]
+                            },
+                           columns=['user_id', 'title', 'detail',
+                                    'publish_time', 'repost_count', 'donate_count',
+                                    'comment_count', 'device', 'href'])
+            print df
+            df.to_sql(archive_table_mysql, engine, if_exists='append', index=False)
+            return True
+
+        except Exception,e:
+            print e
+            return False
+
 if __name__ == "__main__":
 
-    # query_sql = "select user_id, name, sex,area,stock_count, talk_count,fans_count,big_v_in_fans_count," \
-    #             "follows_count,capacitys, summary, follow_search_time, update_time from %s" % (big_v_table_mysql)
-    # df_query = pd.read_sql_query(query_sql, engine)
-    # print len(df_query)
-    # print df_query[:10]
-    # df_query.to_sql(big_v_table_mysql+'_back151130', engine, if_exists='append', index=False)
 
     xueqiu = XueQiu()
-    xueqiu.get_unfinished_big_v()
+    #xueqiu.get_unfinished_big_v()
+    xueqiu.get_publish_articles('8510627167')
+    exit(0)
 
     init_id = 'zzx8964' # 'ibaina'
     xueqiu.get_BigV_Info(init_id)
