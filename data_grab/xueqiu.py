@@ -4,6 +4,9 @@ import sys
 reload(sys)
 sys.setdefaultencoding('utf8')
 
+import os
+
+
 import MySQLdb
 import ConfigParser
 from selenium import webdriver
@@ -166,7 +169,7 @@ class XueQiu:
         bigV.user_id = id
         if bigV.check_exists():
             print encode_wrap("id:%s 已经在数据库中" % id)
-            return
+            return True
 
         try:
             url = 'http://xueqiu.com/%s' % str(id)
@@ -221,8 +224,9 @@ class XueQiu:
             df = DataFrame(se).T
             df.to_sql(unfinish_big_v_table_mysql, engine, if_exists='append', index=False)
             print e
+            return False
 
-
+        return True
 
 
     # 获取投资组合
@@ -379,13 +383,24 @@ class XueQiu:
             df = DataFrame({'user_id':followList, #被关注者
                             'fans_id':id                            #关注者
                             }, columns=['user_id', 'fans_id'])
-            print df
+            print df[:10]
             df.to_sql(fans_in_big_v_table_mysql, engine, if_exists='append', index=False)
 
         except Exception,e:
             print e
 
-
+    # 从未完成列表中继续搜索
+    def get_unfinished_big_v(self):
+        sql = "select distinct user_id from %s" % unfinish_big_v_table_mysql
+        df = pd.read_sql_query(sql, engine)
+        print "unfinish list len:", len(df)
+        user_ids = df['user_id'].get_values()
+        for user_id in user_ids:
+            result = self.get_BigV_Info(user_id)
+            self.get_follow_list(user_id)
+            if result:
+                engine.execute("delete from %s where user_id='%s'" % (unfinish_big_v_table_mysql, user_id))
+                print encode_wrap('删除未完成列表的user_id')
 
 
 class User:
@@ -454,7 +469,9 @@ if __name__ == "__main__":
     # df_query.to_sql(big_v_table_mysql+'_back151130', engine, if_exists='append', index=False)
 
     xueqiu = XueQiu()
-    init_id ='3037882447' # 'ibaina'
+    xueqiu.get_unfinished_big_v()
+
+    init_id = 'zzx8964' # 'ibaina'
     xueqiu.get_BigV_Info(init_id)
 
     follow_list = xueqiu.get_follow_list(init_id)
