@@ -4,8 +4,11 @@ import sys
 reload(sys)
 sys.setdefaultencoding('utf8')
 
-import os
-
+import platform
+if platform.system() == 'Windows':
+    sys.path.append('D:/Code/wealth_spider')
+else:
+    sys.path.append('/Users/cbb/Documents/pythonspace/wealth_spider')
 
 import MySQLdb
 import ConfigParser
