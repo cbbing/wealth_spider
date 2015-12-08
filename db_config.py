@@ -23,6 +23,7 @@ big_v_table_mysql = 'big_v_table'
 fans_in_big_v_table_mysql = 'fans_in_big_v_table'
 
 unfinish_big_v_table_mysql = "unfinish_big_v_table"
+unfinish_arcticle_table_mysql = "unfinish_arcticle_table"
 
 #
 # #日志设置

@@ -111,35 +111,36 @@ class XueQiu:
             return {}
 
     def get_web_driver(self):
-        driver = webdriver.Firefox()
-        return driver
+        #driver = webdriver.Firefox()
+        #return driver
 
-        # try_times = 3
-        # while (try_times > 0):
-        #
-        #     try:
-        #         proxies = self.get_proxies()
-        #         if proxies.has_key('http'):
-        #             myProxy = proxies['http']
-        #         elif proxies.has_key('https'):
-        #             myProxy = proxies['https']
-        #
-        #         proxy = Proxy({
-        #            'proxyType': ProxyType.MANUAL,
-        #             'httpProxy': myProxy,
-        #             'ftpProxy': myProxy,
-        #             'sslProxy': myProxy,
-        #             'noProxy': ''
-        #         })
-        #         driver = webdriver.Firefox(proxy=proxy)
-        #         driver.set_page_load_timeout(10)
-        #         print encode_wrap("使用代理:"), myProxy
-        #         return driver
-        #     except Exception,e:
-        #         print encode_wrap('连接超时, 重试%s' % (3 - try_times + 1))
-        #         try_times -= 1
-        #
-        # return None
+        try_times = 3
+        while (try_times > 0):
+
+            try:
+                proxies = self.get_proxies()
+                if proxies.has_key('http'):
+                    myProxy = proxies['http']
+                elif proxies.has_key('https'):
+                    myProxy = proxies['https']
+
+                proxy = Proxy({
+                   'proxyType': ProxyType.MANUAL,
+                    'httpProxy': myProxy,
+                    'ftpProxy': myProxy,
+                    'sslProxy': myProxy,
+                    'noProxy': ''
+                })
+                driver = webdriver.Firefox(proxy=proxy)
+                driver.set_page_load_timeout(10)
+                driver.get('http://www.baidu.com')
+                print encode_wrap("使用代理:"), myProxy
+                return driver
+            except Exception,e:
+                print encode_wrap('连接超时, 重试%s' % (3 - try_times + 1))
+                try_times -= 1
+
+        return None
 
 
     def get_request(self, url):
@@ -367,9 +368,23 @@ class XueQiu:
             print e
             return []
 
+    def get_publish_articles(self):
+        sql = 'select distinct user_id from %s where user_id not in (select distinct user_id from %s)' % (big_v_table_mysql, archive_table_mysql)
+        df = pd.read_sql_query(sql, engine)
+        user_ids = df['user_id'].get_values()
+        for user_id in user_ids:
+            try:
+                self.get_publish_articles_by_id(user_id)
+            except Exception, e:
+                se = Series([user_id, GetNowTime(), str(e)], index=['user_id', 'fail_time', 'fail_reason'])
+                df = DataFrame(se).T
+                df.to_sql(unfinish_arcticle_table_mysql, engine, if_exists='append', index=False)
+                print e
+
+
 
     # 获取发布文章列表
-    def get_publish_articles(self, id):
+    def get_publish_articles_by_id(self, id):
         url = 'http://xueqiu.com/%s' % str(id)
         driver = self.get_web_driver()
         driver.get(url)
@@ -428,8 +443,12 @@ class XueQiu:
 
     # 从未完成列表中继续搜索
     def get_unfinished_big_v(self):
-        sql = "select distinct user_id from %s" % unfinish_big_v_table_mysql
-        df = pd.read_sql_query(sql, engine)
+        sql1 = "select distinct user_id from %s where length(follow_search_time) = 0" % (big_v_table_mysql)
+        sql2 = "select distinct user_id from %s" % unfinish_big_v_table_mysql
+        df1 = pd.read_sql_query(sql1, engine)
+        df2 = pd.read_sql_query(sql2, engine)
+        print 'df1:%d, df2:%d' % (len(df1), len(df2))
+        df = pd.merge(df1,df2, how='outer')
         print "unfinish list len:", len(df)
         user_ids = df['user_id'].get_values()
         for user_id in user_ids:
@@ -649,7 +668,7 @@ if __name__ == "__main__":
 
     xueqiu = XueQiu()
     #xueqiu.get_unfinished_big_v()
-    xueqiu.get_publish_articles('8510627167')
+    xueqiu.get_publish_articles()
     exit(0)
 
     init_id = 'zzx8964' # 'ibaina'
