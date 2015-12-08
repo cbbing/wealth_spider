@@ -140,6 +140,7 @@ class XueQiu:
                 print encode_wrap('连接超时, 重试%s' % (3 - try_times + 1))
                 try_times -= 1
 
+
         return None
 
 
@@ -422,9 +423,7 @@ class XueQiu:
                 print encode_wrap('点击下一页出错, 退出...')
                 break
 
-
-
-
+        driver.quit()
 
 
 
@@ -457,6 +456,24 @@ class XueQiu:
             if result:
                 engine.execute("delete from %s where user_id='%s'" % (unfinish_big_v_table_mysql, user_id))
                 print encode_wrap('删除未完成列表的user_id')
+
+    # 计算大V排名
+    def calcute_big_v_rank(self):
+        factor_fans = 0.5
+        factor_big_v_in_fans = 0.1
+        factor_arcticle = 0.3
+        factor_comments = 0.2
+
+        total_score = 0
+
+        sql_bigv = "select user_id, fans_count from %s where fans_count > 10000" % big_v_table_mysql;
+        df_bigv = pd.read_sql_query(sql_bigv, engine)
+        for row in df_bigv.iterrows():
+            user_id = row['user_id']
+            score = row['fans_count'] * factor_fans
+            sql_bigv_in_fans = "SELECT count(*) FROM %s where user_id = '%s'" % (fans_in_big_v_table_mysql, user_id)
+            
+
 
     ### 类中的辅助函数
 
@@ -668,7 +685,8 @@ if __name__ == "__main__":
 
     xueqiu = XueQiu()
     #xueqiu.get_unfinished_big_v()
-    xueqiu.get_publish_articles()
+    #xueqiu.get_publish_articles()
+    xueqiu.calcute_big_v_rank()
     exit(0)
 
     init_id = 'zzx8964' # 'ibaina'
