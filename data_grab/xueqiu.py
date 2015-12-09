@@ -472,7 +472,8 @@ class XueQiu:
             user_id = row['user_id']
             score = row['fans_count'] * factor_fans
             sql_bigv_in_fans = "SELECT count(*) FROM %s where user_id = '%s'" % (fans_in_big_v_table_mysql, user_id)
-            
+            sql_arcticle = "select count(*), sum(comment_count) from %s where user_id='%s'" % (archive_table_mysql, user_id)
+
 
 
     ### 类中的辅助函数
