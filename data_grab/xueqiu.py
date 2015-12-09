@@ -47,7 +47,7 @@ class XueQiu:
         self.init_time = time.time()
 
         self.site = 'http://xueqiu.com'
-        self.sleep_time = 3  # second
+        self.sleep_time = 5  # second
 
         #self.init_database()
 
@@ -111,8 +111,8 @@ class XueQiu:
             return {}
 
     def get_web_driver(self):
-        #driver = webdriver.Firefox()
-        #return driver
+        driver = webdriver.Firefox()
+        return driver
 
         try_times = 3
         while (try_times > 0):
@@ -370,8 +370,12 @@ class XueQiu:
             return []
 
     def get_publish_articles(self):
+        t1 = time.time()
+        print 'begin query...'
         sql = 'select distinct user_id from %s where user_id not in (select distinct user_id from %s)' % (big_v_table_mysql, archive_table_mysql)
         df = pd.read_sql_query(sql, engine)
+        t2 = time.time()
+        print 'query mysql by join cose:', t2-t1, 's'
         user_ids = df['user_id'].get_values()
         for user_id in user_ids:
             try:
@@ -468,11 +472,14 @@ class XueQiu:
 
         sql_bigv = "select user_id, fans_count from %s where fans_count > 10000" % big_v_table_mysql;
         df_bigv = pd.read_sql_query(sql_bigv, engine)
-        for row in df_bigv.iterrows():
-            user_id = row['user_id']
-            score = row['fans_count'] * factor_fans
-            sql_bigv_in_fans = "SELECT count(*) FROM %s where user_id = '%s'" % (fans_in_big_v_table_mysql, user_id)
-            
+        for i in range(len(df_bigv)):
+            #print df_bigv
+            user_id = df_bigv.ix[i, 'user_id']
+            score = int(df_bigv.ix[i,'fans_count']) * factor_fans
+            sql_bigv_in_fans = "SELECT count(*) as FCount FROM %s where user_id = '%s'" % (fans_in_big_v_table_mysql, user_id)
+            df_bigv_in_fans = pd.read_sql_query(sql_bigv_in_fans, engine)
+            if len(df_bigv_in_fans):
+                print df_bigv_in_fans.ix[0, 'FCount']
 
 
     ### 类中的辅助函数
@@ -685,8 +692,8 @@ if __name__ == "__main__":
 
     xueqiu = XueQiu()
     #xueqiu.get_unfinished_big_v()
-    #xueqiu.get_publish_articles()
-    xueqiu.calcute_big_v_rank()
+    xueqiu.get_publish_articles()
+    #xueqiu.calcute_big_v_rank()
     exit(0)
 
     init_id = 'zzx8964' # 'ibaina'
