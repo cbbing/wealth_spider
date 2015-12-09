@@ -475,12 +475,24 @@ class XueQiu:
         for i in range(len(df_bigv)):
             #print df_bigv
             user_id = df_bigv.ix[i, 'user_id']
-            score = int(df_bigv.ix[i,'fans_count']) * factor_fans
-            sql_bigv_in_fans = "SELECT count(*) as FCount FROM %s where user_id = '%s'" % (fans_in_big_v_table_mysql, user_id)
+            fans_count = int(df_bigv.ix[i,'fans_count'])
+            sql_bigv_in_fans = "SELECT count(*) as BigVFansCount FROM %s where user_id = '%s'" % (fans_in_big_v_table_mysql, user_id)
             df_bigv_in_fans = pd.read_sql_query(sql_bigv_in_fans, engine)
             if len(df_bigv_in_fans):
-                print df_bigv_in_fans.ix[0, 'FCount']
+                bigvfans_count = df_bigv_in_fans.ix[0, 'BigVFansCount']
+            else:
+                bigvfans_count = 0
 
+            sql_arcticle = "select count(*) as ArticleCount , sum(comment_count) as CommentCount from %s where user_id='%s'" % (archive_table_mysql, user_id)
+            df_arcticle = pd.read_sql_query(sql_arcticle, engine)
+            if len(df_arcticle):
+                article_count = df_arcticle.ix[0, 'ArticleCount']
+                comment_count = df_arcticle.ix[0, 'CommentCount']
+            else:
+                article_count = 0
+                comment_count = 0
+
+            score = factor_fans * fans_count + factor_big_v_in_fans *  bigvfans_count + factor_arcticle * article_count + factor_comments * comment_count
 
     ### 类中的辅助函数
 
