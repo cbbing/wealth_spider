@@ -468,7 +468,7 @@ class XueQiu:
         factor_arcticle = 0.3
         factor_comments = 0.2
 
-        total_score = 0
+        scores = []
 
         sql_bigv = "select user_id, fans_count from %s where fans_count > 10000" % big_v_table_mysql;
         df_bigv = pd.read_sql_query(sql_bigv, engine)
@@ -493,6 +493,22 @@ class XueQiu:
                 comment_count = 0
 
             score = factor_fans * fans_count + factor_big_v_in_fans *  bigvfans_count + factor_arcticle * article_count + factor_comments * comment_count
+            scores.append((score, user_id))
+
+        scores = sorted(scores)[-1::-1]
+        print '前十名:'
+        print scores[:10]
+
+    # 分词提取
+    def word_seg(self):
+        sql = "select user_id, detail from %s " % (archive_table_mysql)
+        df = pd.read_sql_query(sql, engine)
+        for i in range(len(df)):
+            user_id = df.ix[i, 'user_id']
+            detail = df.ix[i, 'detail']
+
+
+
 
     ### 类中的辅助函数
 
