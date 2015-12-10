@@ -579,41 +579,45 @@ class XueQiu:
 
         archiveList = []
 
-        statusAll = soup.find('ul', {'class':'status-list'})
-        statusList = statusAll.findAll('li')
-        for status in statusList:
+        try:
 
-            try:
-
-                archive = Article()
-                archive.user_id = id
-
-                archive.detail = status.find('div', {'class':'detail'}).get_text()
-                infos = status.find('div', {'class':'infos'})
-                archive.publish_time = archive.regularization_time(infos.find('a', {'class':'time'}).get_text())
-                archive.device = infos.find('span').get_text().replace('来自', '')
+            statusAll = soup.find('ul', {'class':'status-list'})
+            statusList = statusAll.findAll('li')
+            for status in statusList:
 
                 try:
-                    # 若存在标题
-                    titleH4 = status.find('h4')
-                    archive.title = titleH4.find('a').get_text()
-                    archive.href = self.site + titleH4.find('a')['href']
-                except:
-                    print 'no title and href'
 
-                ops = status.find('div', {'class':'ops'})
-                repost = ops.find('a', {'class':'repost second'}).get_text()
-                donate = ops.find('a', {'class':'donate'}).get_text()
-                comment = ops.find('a', {'class':'statusComment last'}).get_text()
-                archive.repost_count = repost.replace('转发', '').replace('(','').replace(')','')
-                archive.donate_count = donate.replace('赞助', '').replace('(','').replace(')','')
-                archive.comment_count = comment.replace('评论', '').replace('(','').replace(')','')
+                    archive = Article()
+                    archive.user_id = id
 
-                archiveList.append(archive)
+                    archive.detail = status.find('div', {'class':'detail'}).get_text()
+                    infos = status.find('div', {'class':'infos'})
+                    archive.publish_time = archive.regularization_time(infos.find('a', {'class':'time'}).get_text())
+                    archive.device = infos.find('span').get_text().replace('来自', '')
 
-            except Exception, e:
+                    try:
+                        # 若存在标题
+                        titleH4 = status.find('h4')
+                        archive.title = titleH4.find('a').get_text()
+                        archive.href = self.site + titleH4.find('a')['href']
+                    except:
+                        print 'no title and href'
+
+                    ops = status.find('div', {'class':'ops'})
+                    repost = ops.find('a', {'class':'repost second'}).get_text()
+                    donate = ops.find('a', {'class':'donate'}).get_text()
+                    comment = ops.find('a', {'class':'statusComment last'}).get_text()
+                    archive.repost_count = repost.replace('转发', '').replace('(','').replace(')','')
+                    archive.donate_count = donate.replace('赞助', '').replace('(','').replace(')','')
+                    archive.comment_count = comment.replace('评论', '').replace('(','').replace(')','')
+
+                    archiveList.append(archive)
+
+                except Exception, e:
+                    print e
+        except Exception, e:
                 print e
-
+            
         return archiveList
 
 
