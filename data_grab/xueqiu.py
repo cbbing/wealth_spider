@@ -26,6 +26,7 @@ from multiprocessing import Pool
 from util.CodeConvert import *
 from db_config import *
 from IPProxy.ip_proxy import IP_Proxy
+from util.helper import fn_timer
 
 
 
@@ -425,15 +426,19 @@ class XueQiu:
 
             archiveList = self.get_archive_list_in_one_page(soup, id)
 
+            # 存入mysql
+            #[archive.to_mysql() for archive in archiveList if not archive.check_exists()]
+            [archive.to_mysql() for archive in archiveList] #不需判断数据库是否存在,若存在则抛出异常,不插入
+
             # 判断文章是否为最近一年发布，若否则不继续搜索
             if len(archiveList) > 0:
                 archive = archiveList[-1]
 
-                if not '2015' in archive.publish_time:
+                nowDate = GetNowTime2()
+                now_year = int(nowDate[:4])
+                last_year = nowDate.replace(str(now_year), str(now_year-1)) # 去年今日
+                if archive.publish_time < last_year:
                     break
-
-            # 存入mysql
-            [archive.to_mysql() for archive in archiveList if not archive.check_exists()]
 
             # 点击下一页
             clickStatus = self.click_next_page(driver,'//ul[@class="status-list"]', current_page)
@@ -444,6 +449,7 @@ class XueQiu:
             else:
                 print encode_wrap('点击下一页出错, 退出...')
                 break
+
 
         driver.quit()
 
@@ -686,8 +692,21 @@ class Article:
     def check_exists(self):
 
         try:
+            # if not os.path.exists('../Data/Temp'):
+            #     os.mkdir('../Data/Temp')
+            # filename = '../Data/Temp/query_exists.json'
+
+            # if os.path.exists(filename):
+            #     df_query = pd.read_json(filename)
+            #     print df_query[:10]
+            # else:
+
             query_sql = "select * from %s where user_id='%s' and publish_time='%s'" % (archive_table_mysql, self.user_id, self.publish_time)
             df_query = pd.read_sql_query(query_sql, engine)
+            print df_query[:10]
+                #df_query.to_json(filename)
+
+
             if len(df_query) > 0:
                 return True
             else:
