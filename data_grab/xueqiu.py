@@ -139,6 +139,10 @@ class XueQiu:
             except Exception,e:
                 print encode_wrap('连接超时, 重试%s' % (3 - try_times + 1))
                 try_times -= 1
+                try:
+                    driver.quit()
+                except:
+                    None
 
 
         return None
@@ -372,11 +376,18 @@ class XueQiu:
     def get_publish_articles(self):
         t1 = time.time()
         print 'begin query...'
-        sql = 'select distinct user_id from %s where user_id not in (select distinct user_id from %s)' % (big_v_table_mysql, archive_table_mysql)
-        df = pd.read_sql_query(sql, engine)
+        #sql = 'select distinct user_id from %s where user_id not in (select distinct user_id from %s)' % (big_v_table_mysql, archive_table_mysql)
+        #df = pd.read_sql_query(sql, engine)
+        sql1 = 'select distinct user_id from %s where fans_count > 10000' % (big_v_table_mysql)
+        sql2 = 'select distinct user_id from %s' % archive_table_mysql
+        df1 = pd.read_sql_query(sql1, engine)
+        df2 = pd.read_sql_query(sql2, engine)
+        user_ids1 = df1['user_id'].get_values()
+        user_ids2 = df2['user_id'].get_values()
+        user_ids = [id for id in set(user_ids1).difference(user_ids2)]
         t2 = time.time()
         print 'query mysql by join cose:', t2-t1, 's'
-        user_ids = df['user_id'].get_values()
+        #user_ids = df['user_id'].get_values()
         for user_id in user_ids:
             try:
                 self.get_publish_articles_by_id(user_id)
@@ -413,6 +424,13 @@ class XueQiu:
             print "Page:%d / %d" % (current_page, page_count)
 
             archiveList = self.get_archive_list_in_one_page(soup, id)
+
+            # 判断文章是否为最近一年发布，若否则不继续搜索
+            if len(archiveList) > 0:
+                archive = archiveList[-1]
+
+                if not '2015' in archive.publish_time:
+                    break
 
             # 存入mysql
             [archive.to_mysql() for archive in archiveList if not archive.check_exists()]
