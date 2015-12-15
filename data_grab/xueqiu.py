@@ -492,36 +492,52 @@ class XueQiu:
         factor_arcticle = 0.3
         factor_comments = 0.2
 
+        t00 = time.time()
+
         scores = []
 
         sql_bigv = "select user_id, fans_count from %s where fans_count > 10000" % big_v_table_mysql;
         df_bigv = pd.read_sql_query(sql_bigv, engine)
         for i in range(len(df_bigv)):
+
+            t0 = time.time()
+
             #print df_bigv
             user_id = df_bigv.ix[i, 'user_id']
             fans_count = int(df_bigv.ix[i,'fans_count'])
             sql_bigv_in_fans = "SELECT count(*) as BigVFansCount FROM %s where user_id = '%s'" % (fans_in_big_v_table_mysql, user_id)
             df_bigv_in_fans = pd.read_sql_query(sql_bigv_in_fans, engine)
-            if len(df_bigv_in_fans):
+            bigvfans_count = 0
+            if len(df_bigv_in_fans) and not df_bigv_in_fans.ix[0, 'BigVFansCount'] is None:
                 bigvfans_count = df_bigv_in_fans.ix[0, 'BigVFansCount']
-            else:
-                bigvfans_count = 0
+
+
 
             sql_arcticle = "select count(*) as ArticleCount , sum(comment_count) as CommentCount from %s where user_id='%s'" % (archive_table_mysql, user_id)
             df_arcticle = pd.read_sql_query(sql_arcticle, engine)
+
+            article_count = 0
+            comment_count = 0
             if len(df_arcticle):
-                article_count = df_arcticle.ix[0, 'ArticleCount']
-                comment_count = df_arcticle.ix[0, 'CommentCount']
-            else:
-                article_count = 0
-                comment_count = 0
+                if not df_arcticle.ix[0, 'ArticleCount'] is None:
+                    article_count = df_arcticle.ix[0, 'ArticleCount']
+                if not df_arcticle.ix[0, 'CommentCount'] is None:
+                    comment_count = df_arcticle.ix[0, 'CommentCount']
+
+
 
             score = factor_fans * fans_count + factor_big_v_in_fans *  bigvfans_count + factor_arcticle * article_count + factor_comments * comment_count
             scores.append((score, user_id))
 
+            t1 = time.time()
+            print 'Index:{0}  {1:>12}:{2:<12}   {3:.2f}s'.format(i, user_id, score, t1-t0)
+
         scores = sorted(scores)[-1::-1]
         print '前十名:'
         print scores[:10]
+
+        t01 = time.time()
+        print 'total time:{:.2f}'.format(t01-t00)
 
     # 分词提取
     def word_seg(self):
@@ -761,8 +777,8 @@ if __name__ == "__main__":
 
     xueqiu = XueQiu()
     #xueqiu.get_unfinished_big_v()
-    xueqiu.get_publish_articles()
-    #xueqiu.calcute_big_v_rank()
+    #xueqiu.get_publish_articles()
+    xueqiu.calcute_big_v_rank()
     exit(0)
 
     init_id = 'zzx8964' # 'ibaina'
