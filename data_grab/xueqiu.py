@@ -27,6 +27,7 @@ from util.CodeConvert import *
 from db_config import *
 from IPProxy.ip_proxy import IP_Proxy
 from util.helper import fn_timer
+import ConfigParser
 
 
 
@@ -256,13 +257,13 @@ class XueQiu:
     def get_follow_list(self, id):
         try:
             #过滤已走路径
-            query = "select follow_search_time from %s where user_id='%s'" % (big_v_table_mysql, id )
-            df_query = pd.read_sql_query(query, engine)
-            if len(df_query) > 0 :
-                data = df_query.ix[0, 'follow_search_time']
-                if not data is None and len(df_query.ix[0, 'follow_search_time']) > 0:
-                    print 'have get follow (%s)' % id
-                    return
+            # query = "select follow_search_time from %s where user_id='%s'" % (big_v_table_mysql, id )
+            # df_query = pd.read_sql_query(query, engine)
+            # if len(df_query) > 0 :
+            #     data = df_query.ix[0, 'follow_search_time']
+            #     if not data is None and len(df_query.ix[0, 'follow_search_time']) > 0:
+            #         print 'have get follow (%s)' % id
+            #         return
 
             # 定期更换IP代理库
             s1 = time.time()
@@ -293,6 +294,11 @@ class XueQiu:
 
             #page_count = 1
 
+
+            cf = ConfigParser.ConfigParser()
+            cf.read('../config.ini')
+            fans_count_threshold = cf.get('fans', 'fans_count')
+
             followList = []
             current_page = 1
             while(current_page < page_count+1):
@@ -316,7 +322,7 @@ class XueQiu:
                         if m:
                             print encode_wrap(name), href, encode_wrap(m.group(0))
                             fans_count = int(m.group(1))
-                            if fans_count >= 1000:
+                            if fans_count >= fans_count_threshold:
                                 followList.append(href)
 
                     # 点击下一页
@@ -778,11 +784,14 @@ if __name__ == "__main__":
     xueqiu = XueQiu()
     #xueqiu.get_unfinished_big_v()
     #xueqiu.get_publish_articles()
-    xueqiu.calcute_big_v_rank()
-    exit(0)
+    #xueqiu.calcute_big_v_rank()
+    #exit(0)
 
-    init_id = 'zzx8964' # 'ibaina'
-    xueqiu.get_BigV_Info(init_id)
+    cf = ConfigParser.ConfigParser()
+    cf.read('../config.ini')
+    init_id = cf.get('start', 'init_id')
+
+    #xueqiu.get_BigV_Info(init_id)
 
     follow_list = xueqiu.get_follow_list(init_id)
     if follow_list is None:
