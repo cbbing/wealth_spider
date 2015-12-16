@@ -20,6 +20,7 @@ import pandas as pd
 from pandas import DataFrame, Series
 import requests
 import random
+
 from multiprocessing.dummy import Pool as ThreadPool
 from multiprocessing import Pool
 
@@ -27,7 +28,8 @@ from util.CodeConvert import *
 from db_config import *
 from IPProxy.ip_proxy import IP_Proxy
 from util.helper import fn_timer
-import ConfigParser
+from util.webHelper import max_window, get_requests
+
 
 
 
@@ -46,10 +48,13 @@ class XueQiu:
             ip_proxy.run()
             self.df_ip = pd.read_csv(ip_file)
 
-        self.init_time = time.time()
+        cf = ConfigParser.ConfigParser()
+        cf.read('../config.ini')
 
+
+        self.init_time = time.time()
         self.site = 'http://xueqiu.com'
-        self.sleep_time = 5  # second
+        self.sleep_time = int(cf.get('web', 'wait_time'))  # second
 
         #self.init_database()
 
@@ -88,6 +93,14 @@ class XueQiu:
 
         except MySQLdb.Error,e:
              print "Mysql Error %d: %s" % (e.args[0], e.args[1])
+
+    def _check_if_need_update_ip(self):
+        # 定期更换IP代理库
+        s1 = time.time()
+        if (s1 - self.init_time) > 8 * 60 * 60: #8小时更新一次
+            print '更换IP代理库'
+            self.update_ip_data()
+            self.init_time = time.time()
 
     # 更新IP代理库
     def update_ip_data(self):
@@ -150,6 +163,7 @@ class XueQiu:
         return None
 
 
+
     def get_request(self, url):
 
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/31.0.1650.57 Safari/537.36'}
@@ -188,7 +202,8 @@ class XueQiu:
         try:
             url = 'http://xueqiu.com/%s' % str(id)
             print url
-            r = self.get_request(url)
+            r = get_requests(url, self.df_ip)
+            #r = self.get_request(url)
             soup = BeautifulSoup(r.text, 'html5lib')
 
             info = soup.find('div', {'class':'profile_info_content'})
@@ -252,9 +267,13 @@ class XueQiu:
         pass
 
 
+    # 获取粉丝列表
+    def get_fans_list(self, id):
+        self.get_follow_list(id, 'followers_content')
 
-    # 获取关注列表
-    def get_follow_list(self, id):
+    # 获取关注列表   (粉丝列表复用此函数)
+    # list_type: friends_content  or followers_content
+    def get_follow_list(self, id, list_type='friends_content'):
         try:
             #过滤已走路径
             # query = "select follow_search_time from %s where user_id='%s'" % (big_v_table_mysql, id )
@@ -265,115 +284,75 @@ class XueQiu:
             #         print 'have get follow (%s)' % id
             #         return
 
-            # 定期更换IP代理库
-            s1 = time.time()
-            if (s1 - self.init_time) > 8 * 60 * 60:
-                print '更换IP代理库'
-                self.update_ip_data()
-                self.init_time = time.time()
+            self._check_if_need_update_ip()
 
 
             url = 'http://xueqiu.com/%s' % str(id)
             driver = self.get_web_driver()
             driver.get(url)
 
-            driver.maximize_window()
-            siz = driver.get_window_size()
-            driver.set_window_size(siz['width'], siz['height']*2)
+            max_window(driver)
 
             # 模拟点击“关注”
-            driver.find_element_by_xpath('//a[@href="#friends_content"]').click()
-
-            # f = open('show.html','w')
-            # f.write(driver.page_source)
-            # f.close()
+            driver.find_element_by_xpath('//a[@href="#{0}"]'.format(list_type)).click()
+            soup = BeautifulSoup(driver.page_source, 'html5lib')
 
             # 获取关注的总页码
-            soup = BeautifulSoup(driver.page_source, 'html5lib')
-            page_count = self.get_page_count(soup, 'friends_content')
+            page_count = self._get_page_count(soup, list_type)
 
-            #page_count = 1
-
-
-            cf = ConfigParser.ConfigParser()
-            cf.read('../config.ini')
-            fans_count_threshold = cf.get('fans', 'fans_count')
-
-            followList = []
+            follow_list = []
             current_page = 1
             while(current_page < page_count+1):
 
-                # pageLi = soup.find('li', {'class':'next'})
-                # pageA = pageLi.find('a')
-                # data_page = (int)(pageA['data-page'])-1
                 print "Page:%d / %d" % (current_page, page_count)
 
                 try:
                     # add friends where follows>1000
+                    follow_list_one_page = self._get_fans_list_in_one_page(soup)
+                    follow_list.extend(follow_list_one_page)
 
-                    userAll = soup.find('ul', {'class':'users-list'})
-                    userList = userAll.findAll('li')
-                    for user in userList:
-                        href = user.find('a')['href'].replace('/', '')
-                        name = user.find('a')['data-name']
-
-                        userInfo = user.find('div', {'class':'userInfo'}).get_text()
-                        m = re.search(u'粉丝(\d+)', userInfo)
-                        if m:
-                            print encode_wrap(name), href, encode_wrap(m.group(0))
-                            fans_count = int(m.group(1))
-                            if fans_count >= fans_count_threshold:
-                                followList.append(href)
+                    current_page += 1
 
                     # 点击下一页
-                    try:
-                        UserListElement = driver.find_element_by_xpath('//ul[@class="users-list"]')
-                        btn_nexts = UserListElement.find_elements_by_xpath('//ul[@class="pager"]//a[@data-page="%d"]' % current_page)
-
-                        #NextElement = UserListElement.find_element_by_xpath('//li[@class="next"]')
-                        #btn_nexts = NextElement.find_elements_by_xpath('//a[@data-page="%d"]' % current_page)
-
-                        for btn_next in btn_nexts:
-                            if btn_next.is_displayed():
-                                btn_next.click()
-                                print 'click follows page:%d' % current_page
-                                break
-                            else:
-                                print 'next button  no show'
-
+                    clickStatus = self._click_next_page(driver,'//ul[@class="users-list"]', current_page)
+                    if clickStatus:
                         soup = BeautifulSoup(driver.page_source, 'html5lib')
-                        current_page += 1
-                        time.sleep(3)
-
-                    except Exception,e:
-                        print e
+                        time.sleep(self.sleep_time)
+                    else:
+                        print encode_wrap('无下一页{0}, 退出...'.format(current_page))
                         break
+
                 except Exception,e:
                     print e
                     break
 
-            print 'fans count:', len(followList)
+            print 'fans count:', len(follow_list)
             driver.quit()
+            if not len(follow_list):
+                return []
 
-            # 标记已搜寻关注列表
-            sql = 'update %s set follow_search_time = "%s" where user_id = "%s"' % (big_v_table_mysql, GetNowTime(), id)
-            engine.execute(sql)
-
-
-            # 获取关注的大V的信息
+            # 获取关注列表中的大V信息
             #多线程
-            pool = ThreadPool(processes=4)
-            pool.map(self.get_BigV_Info, followList)
+            pool = ThreadPool(processes=10)
+            pool.map(self.get_BigV_Info, follow_list)
             pool.close()
             pool.join()
 
             # for follow in followList:
             #     self.get_BigV_Info(follow)
 
-            # 粉丝中的大V列表
-            self.get_big_v_in_fans(followList, id)
+            # 保存到数据库:粉丝中的大V列表
+            self._big_v_in_fans_to_sql(follow_list, id)
 
-            return followList
+            # 标记已搜寻关注列表
+            if list_type is 'friends_content':
+                search_time_column = 'follow_search_time'
+            else:
+                search_time_column = 'fans_search_time'
+            sql = 'update {0} set {1} = "{2}" where user_id = "{3}"'.format(big_v_table_mysql, search_time_column, GetNowTime(), id)
+            engine.execute(sql)
+
+            return follow_list
 
 
         except Exception,e:
@@ -381,10 +360,12 @@ class XueQiu:
             return []
 
     def get_publish_articles(self):
+
         t1 = time.time()
         print 'begin query...'
         #sql = 'select distinct user_id from %s where user_id not in (select distinct user_id from %s)' % (big_v_table_mysql, archive_table_mysql)
         #df = pd.read_sql_query(sql, engine)
+        #user_ids = df['user_id'].get_values()
         sql1 = 'select distinct user_id from %s where fans_count > 10000' % (big_v_table_mysql)
         sql2 = 'select distinct user_id from %s' % archive_table_mysql
         df1 = pd.read_sql_query(sql1, engine)
@@ -394,7 +375,7 @@ class XueQiu:
         user_ids = [id for id in set(user_ids1).difference(user_ids2)]
         t2 = time.time()
         print 'query mysql by join cose:', t2-t1, 's'
-        #user_ids = df['user_id'].get_values()
+
         for user_id in user_ids:
             try:
                 self.get_publish_articles_by_id(user_id)
@@ -423,14 +404,14 @@ class XueQiu:
 
         # 获取原发布的总页码
         soup = BeautifulSoup(driver.page_source, 'html5lib')
-        page_count = self.get_page_count(soup, 'statusLists')
+        page_count = self._get_page_count(soup, 'statusLists')
 
         # 获取每页文章列表
         current_page = 1
         while(current_page < page_count+1):
             print "Page:%d / %d" % (current_page, page_count)
 
-            archiveList = self.get_archive_list_in_one_page(soup, id)
+            archiveList = self._get_archive_list_in_one_page(soup, id)
 
             # 存入mysql
             #[archive.to_mysql() for archive in archiveList if not archive.check_exists()]
@@ -447,7 +428,7 @@ class XueQiu:
                     break
 
             # 点击下一页
-            clickStatus = self.click_next_page(driver,'//ul[@class="status-list"]', current_page)
+            clickStatus = self._click_next_page(driver,'//ul[@class="status-list"]', current_page)
             if clickStatus:
                 soup = BeautifulSoup(driver.page_source, 'html5lib')
                 current_page += 1
@@ -461,8 +442,8 @@ class XueQiu:
 
 
 
-    # 获取粉丝中的大V
-    def get_big_v_in_fans(self, followList, id):
+    # 保存到数据库: 粉丝中的大V
+    def _big_v_in_fans_to_sql(self, followList, id):
 
         try:
             df = DataFrame({'user_id':followList, #被关注者
@@ -554,12 +535,20 @@ class XueQiu:
             detail = df.ix[i, 'detail']
 
 
+    # 运行: 获取大V
+    def run_get_big_v(self):
+        fans_count = 100000
+        sql = 'select user_id from {0} where fans_count > {1}'.format(big_v_table_mysql, fans_count)
+        df = pd.read_sql_query(sql, engine)
+        user_ids = df['user_id'].get_values()
+        for user_id in user_ids:
+            self.get_fans_list(user_id)
 
 
     ### 类中的辅助函数
 
     # 获取总页码
-    def get_page_count(self, soup, tpye_id):
+    def _get_page_count(self, soup, tpye_id):
 
         try:
             friendsDiv = soup.find('div', {'id':tpye_id})
@@ -577,7 +566,7 @@ class XueQiu:
 
 
     # 点击下一页
-    def click_next_page(self, driver, xpath,  current_page):
+    def _click_next_page(self, driver, xpath,  current_page):
         try:
             UserListElement = driver.find_element_by_xpath(xpath)
             # btn_nexts 找不到唯一的,但只有一个按钮显示,故依次点击,点击成功就马上返回
@@ -596,8 +585,32 @@ class XueQiu:
 
         return False
 
+    # 获取一页中的粉丝/关注列表
+    def _get_fans_list_in_one_page(self, soup):
+
+        followList = []
+
+        cf = ConfigParser.ConfigParser()
+        cf.read('../config.ini')
+        fans_count_threshold = int(cf.get('fans', 'fans_count'))
+
+        userAll = soup.find('ul', {'class':'users-list'})
+        userList = userAll.findAll('li')
+        for user in userList:
+            href = user.find('a')['href'].replace('/', '')
+            name = user.find('a')['data-name']
+
+            userInfo = user.find('div', {'class':'userInfo'}).get_text()
+            m = re.search(u'粉丝(\d+)', userInfo)
+            if m:
+                print encode_wrap(name), href, encode_wrap(m.group(0))
+                fans_count = int(m.group(1))
+                if fans_count >= fans_count_threshold:
+                    followList.append(href)
+        return followList
+
     # 获取一页中的文章列表
-    def get_archive_list_in_one_page(self, soup, id):
+    def _get_archive_list_in_one_page(self, soup, id):
 
         archiveList = []
 
@@ -780,20 +793,26 @@ class Article:
 
 if __name__ == "__main__":
 
+    cf = ConfigParser.ConfigParser()
+    cf.read('../config.ini')
+    init_id = cf.get('start', 'init_id').strip()
 
     xueqiu = XueQiu()
+    xueqiu.run_get_big_v()
+
     #xueqiu.get_unfinished_big_v()
     #xueqiu.get_publish_articles()
     #xueqiu.calcute_big_v_rank()
     #exit(0)
 
-    cf = ConfigParser.ConfigParser()
-    cf.read('../config.ini')
-    init_id = cf.get('start', 'init_id')
-
     #xueqiu.get_BigV_Info(init_id)
+    #xueqiu.get_fans_list(init_id)
+    exit(0)
+
+
 
     follow_list = xueqiu.get_follow_list(init_id)
+
     if follow_list is None:
         print encode_wrap('已查询过关注列表,程序退出')
         exit(0)
