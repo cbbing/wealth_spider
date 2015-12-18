@@ -275,14 +275,20 @@ class XueQiu:
     # list_type: friends_content  or followers_content
     def get_follow_list(self, id, list_type='friends_content'):
         try:
-            #过滤已走路径
-            # query = "select follow_search_time from %s where user_id='%s'" % (big_v_table_mysql, id )
-            # df_query = pd.read_sql_query(query, engine)
-            # if len(df_query) > 0 :
-            #     data = df_query.ix[0, 'follow_search_time']
-            #     if not data is None and len(df_query.ix[0, 'follow_search_time']) > 0:
-            #         print 'have get follow (%s)' % id
-            #         return
+
+            if list_type is 'friends_content':
+                search_time_column = 'follow_search_time'
+            else:
+                search_time_column = 'fans_search_time'
+
+            # 过滤已走路径
+            query = "select %s from %s where user_id='%s'" % (search_time_column, big_v_table_mysql, id )
+            df_query = pd.read_sql_query(query, engine)
+            if len(df_query) > 0 :
+                data = df_query.ix[0, search_time_column]
+                if not data is None and len(df_query.ix[0, search_time_column]) > 0:
+                    print 'have get follow (%s)' % id
+                    return
 
             self._check_if_need_update_ip()
 
@@ -357,10 +363,7 @@ class XueQiu:
             self._big_v_in_fans_to_sql(follow_list, id)
 
             # 标记已搜寻关注列表
-            if list_type is 'friends_content':
-                search_time_column = 'follow_search_time'
-            else:
-                search_time_column = 'fans_search_time'
+
             sql = 'update {0} set {1} = "{2}" where user_id = "{3}"'.format(big_v_table_mysql, search_time_column, GetNowTime(), id)
             engine.execute(sql)
 
