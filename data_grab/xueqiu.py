@@ -549,8 +549,14 @@ class XueQiu:
 
     # 运行: 获取大V
     def run_get_big_v(self):
-        fans_count = 100000
-        sql = 'select user_id from {0} where fans_count > {1} order by fans_count asc'.format(big_v_table_mysql, fans_count)
+
+        cf = ConfigParser.ConfigParser()
+        cf.read('../config.ini')
+        fans_search_scope = cf.get('fans', 'fans_search_scope')
+        fans_l, fans_h = fans_search_scope.strip('[').strip(']').strip().split(',')
+
+        #fans_count = 100000
+        sql = 'select user_id from {0} where fans_count > {1} and fans_count < {2} order by fans_count asc'.format(big_v_table_mysql, fans_l, fans_h)
         df = pd.read_sql_query(sql, engine)
         user_ids = df['user_id'].get_values()
         for user_id in user_ids:
