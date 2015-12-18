@@ -311,13 +311,30 @@ class XueQiu:
                     follow_list_one_page = self._get_fans_list_in_one_page(soup)
                     follow_list.extend(follow_list_one_page)
 
+                    t0 = time.time()
+
+                    # 获取关注列表中的大V信息(每一页)
+                    #多线程
+                    pool = ThreadPool(processes=10)
+                    pool.map(self.get_BigV_Info, follow_list_one_page)
+                    pool.close()
+                    pool.join()
+
                     current_page += 1
+
+                    t1 = time.time()
+                    wait_time = max((self.sleep_time - (t1-t0)), 0)
+                    time.sleep(wait_time)
+                    print 'Page:{}   Wait time:{}'.format(current_page, wait_time)
+
+
 
                     # 点击下一页
                     clickStatus = self._click_next_page(driver,'//ul[@class="users-list"]', current_page)
                     if clickStatus:
                         soup = BeautifulSoup(driver.page_source, 'html5lib')
-                        time.sleep(self.sleep_time)
+
+
                     else:
                         print encode_wrap('无下一页{0}, 退出...'.format(current_page))
                         break
@@ -331,12 +348,7 @@ class XueQiu:
             if not len(follow_list):
                 return []
 
-            # 获取关注列表中的大V信息
-            #多线程
-            pool = ThreadPool(processes=10)
-            pool.map(self.get_BigV_Info, follow_list)
-            pool.close()
-            pool.join()
+
 
             # for follow in followList:
             #     self.get_BigV_Info(follow)
@@ -603,9 +615,10 @@ class XueQiu:
             userInfo = user.find('div', {'class':'userInfo'}).get_text()
             m = re.search(u'粉丝(\d+)', userInfo)
             if m:
-                print encode_wrap(name), href, encode_wrap(m.group(0))
+
                 fans_count = int(m.group(1))
                 if fans_count >= fans_count_threshold:
+                    print encode_wrap(name), href, encode_wrap(m.group(0))
                     followList.append(href)
         return followList
 
