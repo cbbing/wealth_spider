@@ -312,8 +312,8 @@ class XueQiu:
 
 
             url = 'http://xueqiu.com/%s' % str(id)
-            driver = self.get_web_driver()
-            driver.get(url)
+            driver = self.get_web_driver(url)
+            #driver.get(url)
 
             max_window(driver)
 
@@ -423,8 +423,8 @@ class XueQiu:
     # 获取发布文章列表
     def get_publish_articles_by_id(self, id):
         url = 'http://xueqiu.com/%s' % str(id)
-        driver = self.get_web_driver()
-        driver.get(url)
+        driver = self.get_web_driver(url)
+        #driver.get(url)
 
         driver.maximize_window()
         siz = driver.get_window_size()
