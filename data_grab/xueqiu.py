@@ -14,12 +14,14 @@ import MySQLdb
 import ConfigParser
 from selenium import webdriver
 from selenium.webdriver.common.proxy import *
+from selenium.webdriver import FirefoxProfile
 from bs4 import BeautifulSoup
 import re
 import pandas as pd
 from pandas import DataFrame, Series
 import requests
 import random
+from retrying import retry
 
 from multiprocessing.dummy import Pool as ThreadPool
 from multiprocessing import Pool
@@ -125,42 +127,58 @@ class XueQiu:
         else:
             return {}
 
-    def get_web_driver(self):
-        driver = webdriver.Firefox()
+    @retry(stop_max_attempt_number=100)
+    def get_web_driver(self, url):
+        # proxies = self.get_proxies()
+        # if proxies.has_key('http'):
+        #     myProxy = proxies['http']
+        # elif proxies.has_key('https'):
+        #     myProxy = proxies['https']
+        #
+        # driver = webdriver.Firefox()
+        #
+        #
+        # proxy = Proxy()
+        # proxy.http_proxy(myProxy)
+        # profile = FirefoxProfile()
+        # profile.set_proxy(proxy)
+        # driver = webdriver.Firefox(firefox_profile=profile)
+        #
+        #
+        #
+        # return driver
+
+        proxies = self.get_proxies()
+        if proxies.has_key('http'):
+            myProxy = proxies['http']
+        elif proxies.has_key('https'):
+            myProxy = proxies['https']
+
+        proxy = Proxy({
+           'proxyType': ProxyType.MANUAL,
+            'httpProxy': myProxy,
+            # 'ftpProxy': myProxy,
+            # 'sslProxy': myProxy,
+            # 'noProxy': ''
+        })
+        driver = webdriver.Firefox(proxy=proxy)
+
+        driver.set_page_load_timeout(30)
+        driver.get(url)
+        print encode_wrap("使用代理:"), myProxy
+
+        # except Exception,e:
+        #     print encode_wrap('连接超时, 重试' )
+        #     try:
+        #         driver.quit()
+        #     except:
+        #         None
+
+        # if int(driver.status_code) != 200:
+        #
+        #     raise Exception('request fail')
+
         return driver
-
-        try_times = 3
-        while (try_times > 0):
-
-            try:
-                proxies = self.get_proxies()
-                if proxies.has_key('http'):
-                    myProxy = proxies['http']
-                elif proxies.has_key('https'):
-                    myProxy = proxies['https']
-
-                proxy = Proxy({
-                   'proxyType': ProxyType.MANUAL,
-                    'httpProxy': myProxy,
-                    'ftpProxy': myProxy,
-                    'sslProxy': myProxy,
-                    'noProxy': ''
-                })
-                driver = webdriver.Firefox(proxy=proxy)
-                driver.set_page_load_timeout(10)
-                driver.get('http://www.baidu.com')
-                print encode_wrap("使用代理:"), myProxy
-                return driver
-            except Exception,e:
-                print encode_wrap('连接超时, 重试%s' % (3 - try_times + 1))
-                try_times -= 1
-                try:
-                    driver.quit()
-                except:
-                    None
-
-
-        return None
 
 
 
@@ -287,7 +305,7 @@ class XueQiu:
             if len(df_query) > 0 :
                 data = df_query.ix[0, search_time_column]
                 if not data is None and len(df_query.ix[0, search_time_column]) > 0:
-                    print 'have get follow (%s)' % id
+                    print 'has get follow (%s)' % id
                     return
 
             self._check_if_need_update_ip()
@@ -820,6 +838,7 @@ if __name__ == "__main__":
     init_id = cf.get('start', 'init_id').strip()
 
     xueqiu = XueQiu()
+    #xueqiu.get_web_driver('http://www.baidu.com')
     xueqiu.run_get_big_v()
 
     #xueqiu.get_unfinished_big_v()
