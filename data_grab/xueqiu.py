@@ -188,7 +188,7 @@ class XueQiu:
         # driver = webdriver.Firefox(proxy=proxy)
         # ** 暂时注释结束
 
-        driver.set_page_load_timeout(30)
+        #driver.set_page_load_timeout(30)
         driver.get(url)
         #print encode_wrap("使用代理:"), myProxy
         print encode_wrap("使用代理:{}:{}".format(http, port))
