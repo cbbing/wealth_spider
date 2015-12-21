@@ -127,6 +127,21 @@ class XueQiu:
         else:
             return {}
 
+    def get_http_port(self):
+
+        if len(self.df_ip) > 0:
+            print len(self.df_ip)
+            index = random.randint(0, len(self.df_ip))
+            http = self.df_ip.ix[index, 'Type']
+            http = str(http).lower()
+            ip = self.df_ip.ix[index, 'IP']
+            port = self.df_ip.ix[index, 'Port']
+            ip_proxy = "%s://%s:%s" % (http, ip, port)
+            proxies = {http:ip_proxy}
+            return ip, port
+        else:
+            return '',''
+
     @retry(stop_max_attempt_number=100)
     def get_web_driver(self, url):
         # proxies = self.get_proxies()
@@ -147,25 +162,36 @@ class XueQiu:
         #
         #
         # return driver
+        http, port = self.get_http_port()
+        firefoxProfile = FirefoxProfile()
+        firefoxProfile.set_preference("network.proxy.type",1)
+        firefoxProfile.set_preference("network.proxy.http",http)
+        firefoxProfile.set_preference("network.proxy.http_port",port)
+        firefoxProfile.set_preference("network.proxy.no_proxies_on","")
+        driver = webdriver.Firefox(firefox_profile=firefoxProfile)
 
-        proxies = self.get_proxies()
-        if proxies.has_key('http'):
-            myProxy = proxies['http']
-        elif proxies.has_key('https'):
-            myProxy = proxies['https']
 
-        proxy = Proxy({
-           'proxyType': ProxyType.MANUAL,
-            'httpProxy': myProxy,
-            # 'ftpProxy': myProxy,
-            # 'sslProxy': myProxy,
-            # 'noProxy': ''
-        })
-        driver = webdriver.Firefox(proxy=proxy)
+        # ** 暂时注释开始
+        # proxies = self.get_proxies()
+        # if proxies.has_key('http'):
+        #     myProxy = proxies['http']
+        # elif proxies.has_key('https'):
+        #     myProxy = proxies['https']
+        #
+        # proxy = Proxy({
+        #    'proxyType': ProxyType.MANUAL,
+        #     'httpProxy': myProxy,
+        #     # 'ftpProxy': myProxy,
+        #     # 'sslProxy': myProxy,
+        #     # 'noProxy': ''
+        # })
+        # driver = webdriver.Firefox(proxy=proxy)
+        # ** 暂时注释结束
 
         driver.set_page_load_timeout(30)
         driver.get(url)
-        print encode_wrap("使用代理:"), myProxy
+        #print encode_wrap("使用代理:"), myProxy
+        print encode_wrap("使用代理:{}:{}".format(http, port))
 
         # except Exception,e:
         #     print encode_wrap('连接超时, 重试' )
