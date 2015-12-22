@@ -14,12 +14,14 @@ import MySQLdb
 import ConfigParser
 from selenium import webdriver
 from selenium.webdriver.common.proxy import *
+from selenium.webdriver import FirefoxProfile
 from bs4 import BeautifulSoup
 import re
 import pandas as pd
 from pandas import DataFrame, Series
 import requests
 import random
+from retrying import retry
 
 from multiprocessing.dummy import Pool as ThreadPool
 from multiprocessing import Pool
@@ -125,42 +127,84 @@ class XueQiu:
         else:
             return {}
 
-    def get_web_driver(self):
-        driver = webdriver.Firefox()
+    def get_http_port(self):
+
+        if len(self.df_ip) > 0:
+            print len(self.df_ip)
+            index = random.randint(0, len(self.df_ip))
+            http = self.df_ip.ix[index, 'Type']
+            http = str(http).lower()
+            ip = self.df_ip.ix[index, 'IP']
+            port = self.df_ip.ix[index, 'Port']
+            ip_proxy = "%s://%s:%s" % (http, ip, port)
+            proxies = {http:ip_proxy}
+            return ip, port
+        else:
+            return '',''
+
+    @retry(stop_max_attempt_number=100)
+    def get_web_driver(self, url):
+        # proxies = self.get_proxies()
+        # if proxies.has_key('http'):
+        #     myProxy = proxies['http']
+        # elif proxies.has_key('https'):
+        #     myProxy = proxies['https']
+        #
+        # driver = webdriver.Firefox()
+        #
+        #
+        # proxy = Proxy()
+        # proxy.http_proxy(myProxy)
+        # profile = FirefoxProfile()
+        # profile.set_proxy(proxy)
+        # driver = webdriver.Firefox(firefox_profile=profile)
+        #
+        #
+        #
+        # return driver
+        http, port = self.get_http_port()
+        firefoxProfile = FirefoxProfile()
+        firefoxProfile.set_preference("network.proxy.type",1)
+        firefoxProfile.set_preference("network.proxy.http",http)
+        firefoxProfile.set_preference("network.proxy.http_port",port)
+        firefoxProfile.set_preference("network.proxy.no_proxies_on","")
+        driver = webdriver.Firefox(firefox_profile=firefoxProfile)
+
+
+        # ** 暂时注释开始
+        # proxies = self.get_proxies()
+        # if proxies.has_key('http'):
+        #     myProxy = proxies['http']
+        # elif proxies.has_key('https'):
+        #     myProxy = proxies['https']
+        #
+        # proxy = Proxy({
+        #    'proxyType': ProxyType.MANUAL,
+        #     'httpProxy': myProxy,
+        #     # 'ftpProxy': myProxy,
+        #     # 'sslProxy': myProxy,
+        #     # 'noProxy': ''
+        # })
+        # driver = webdriver.Firefox(proxy=proxy)
+        # ** 暂时注释结束
+
+        #driver.set_page_load_timeout(30)
+        driver.get(url)
+        #print encode_wrap("使用代理:"), myProxy
+        print encode_wrap("使用代理:{}:{}".format(http, port))
+
+        # except Exception,e:
+        #     print encode_wrap('连接超时, 重试' )
+        #     try:
+        #         driver.quit()
+        #     except:
+        #         None
+
+        # if int(driver.status_code) != 200:
+        #
+        #     raise Exception('request fail')
+
         return driver
-
-        try_times = 3
-        while (try_times > 0):
-
-            try:
-                proxies = self.get_proxies()
-                if proxies.has_key('http'):
-                    myProxy = proxies['http']
-                elif proxies.has_key('https'):
-                    myProxy = proxies['https']
-
-                proxy = Proxy({
-                   'proxyType': ProxyType.MANUAL,
-                    'httpProxy': myProxy,
-                    'ftpProxy': myProxy,
-                    'sslProxy': myProxy,
-                    'noProxy': ''
-                })
-                driver = webdriver.Firefox(proxy=proxy)
-                driver.set_page_load_timeout(10)
-                driver.get('http://www.baidu.com')
-                print encode_wrap("使用代理:"), myProxy
-                return driver
-            except Exception,e:
-                print encode_wrap('连接超时, 重试%s' % (3 - try_times + 1))
-                try_times -= 1
-                try:
-                    driver.quit()
-                except:
-                    None
-
-
-        return None
 
 
 
@@ -287,15 +331,15 @@ class XueQiu:
             if len(df_query) > 0 :
                 data = df_query.ix[0, search_time_column]
                 if not data is None and len(df_query.ix[0, search_time_column]) > 0:
-                    print 'have get follow (%s)' % id
+                    print 'has get follow (%s)' % id
                     return
 
             self._check_if_need_update_ip()
 
 
             url = 'http://xueqiu.com/%s' % str(id)
-            driver = self.get_web_driver()
-            driver.get(url)
+            driver = self.get_web_driver(url)
+            #driver.get(url)
 
             max_window(driver)
 
@@ -405,8 +449,8 @@ class XueQiu:
     # 获取发布文章列表
     def get_publish_articles_by_id(self, id):
         url = 'http://xueqiu.com/%s' % str(id)
-        driver = self.get_web_driver()
-        driver.get(url)
+        driver = self.get_web_driver(url)
+        #driver.get(url)
 
         driver.maximize_window()
         siz = driver.get_window_size()
@@ -820,6 +864,7 @@ if __name__ == "__main__":
     init_id = cf.get('start', 'init_id').strip()
 
     xueqiu = XueQiu()
+    #xueqiu.get_web_driver('http://www.baidu.com')
     xueqiu.run_get_big_v()
 
     #xueqiu.get_unfinished_big_v()
