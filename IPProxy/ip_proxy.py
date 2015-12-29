@@ -29,7 +29,8 @@ class IP_Proxy:
         self.count = 10
         self.ip_items = []
         self.dir_path = '../Data/'
-
+        if not os.path.exists(self.dir_path):
+            os.mkdir(self.dir_path)
 
     def parse(self, url):
         try:
