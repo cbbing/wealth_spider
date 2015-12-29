@@ -40,15 +40,18 @@ class XueQiu:
     def __init__(self):
         #self.driver = webdriver.Firefox()
         #self.df_ip = pd.read_excel('../Data/ip_proxy_2015-11-25.xlsx','Sheet1') #ip代理地址库
+        mysql_table_ip = 'ip_proxy'
+        sql = 'select * from {0} order by Speed limit {1}'.format(mysql_table_ip, 500)
+        self.df_ip = pd.read_sql_query(sql, engine)
 
-        ip_file = "../Data/ip_proxy_%s.csv" % GetNowDate()
-        try:
-            self.df_ip = pd.read_csv(ip_file)
-        except:
-            print 'not exist:%s, get it now!' % ip_file
-            ip_proxy = IP_Proxy()
-            ip_proxy.run()
-            self.df_ip = pd.read_csv(ip_file)
+        # ip_file = "../Data/ip_proxy_%s.csv" % GetNowDate()
+        # try:
+        #     self.df_ip = pd.read_csv(ip_file)
+        # except:
+        #     print 'not exist:%s, get it now!' % ip_file
+        #     ip_proxy = IP_Proxy()
+        #     ip_proxy.run()
+        #     self.df_ip = pd.read_csv(ip_file)
 
         cf = ConfigParser.ConfigParser()
         cf.read('../config.ini')
@@ -97,6 +100,7 @@ class XueQiu:
              print "Mysql Error %d: %s" % (e.args[0], e.args[1])
 
     def _check_if_need_update_ip(self):
+        return
         # 定期更换IP代理库
         s1 = time.time()
         if (s1 - self.init_time) > 8 * 60 * 60: #8小时更新一次
@@ -144,54 +148,37 @@ class XueQiu:
 
     @retry(stop_max_attempt_number=100)
     def get_web_driver(self, url):
-        # proxies = self.get_proxies()
-        # if proxies.has_key('http'):
-        #     myProxy = proxies['http']
-        # elif proxies.has_key('https'):
-        #     myProxy = proxies['https']
-        #
-        # driver = webdriver.Firefox()
-        #
-        #
-        # proxy = Proxy()
-        # proxy.http_proxy(myProxy)
-        # profile = FirefoxProfile()
-        # profile.set_proxy(proxy)
-        # driver = webdriver.Firefox(firefox_profile=profile)
-        #
-        #
-        #
-        # return driver
-        http, port = self.get_http_port()
-        firefoxProfile = FirefoxProfile()
-        firefoxProfile.set_preference("network.proxy.type",1)
-        firefoxProfile.set_preference("network.proxy.http",http)
-        firefoxProfile.set_preference("network.proxy.http_port",port)
-        firefoxProfile.set_preference("network.proxy.no_proxies_on","")
-        driver = webdriver.Firefox(firefox_profile=firefoxProfile)
 
+        # http, port = self.get_http_port()
+        # firefoxProfile = FirefoxProfile()
+        # firefoxProfile.set_preference("network.proxy.type",1)
+        # firefoxProfile.set_preference("network.proxy.http",http)
+        # firefoxProfile.set_preference("network.proxy.http_port",port)
+        # firefoxProfile.set_preference("network.proxy.no_proxies_on","")
+        # driver = webdriver.Firefox(firefox_profile=firefoxProfile)
+        # print encode_wrap("使用代理:{}:{}".format(http, port))
 
         # ** 暂时注释开始
-        # proxies = self.get_proxies()
-        # if proxies.has_key('http'):
-        #     myProxy = proxies['http']
-        # elif proxies.has_key('https'):
-        #     myProxy = proxies['https']
-        #
-        # proxy = Proxy({
-        #    'proxyType': ProxyType.MANUAL,
-        #     'httpProxy': myProxy,
-        #     # 'ftpProxy': myProxy,
-        #     # 'sslProxy': myProxy,
-        #     # 'noProxy': ''
-        # })
-        # driver = webdriver.Firefox(proxy=proxy)
+        proxies = self.get_proxies()
+        if proxies.has_key('http'):
+            myProxy = proxies['http']
+        elif proxies.has_key('https'):
+            myProxy = proxies['https']
+
+        proxy = Proxy({
+           'proxyType': ProxyType.MANUAL,
+            'httpProxy': myProxy,
+            # 'ftpProxy': myProxy,
+            # 'sslProxy': myProxy,
+            # 'noProxy': ''
+        })
+        driver = webdriver.Firefox(proxy=proxy)
         # ** 暂时注释结束
 
         #driver.set_page_load_timeout(30)
         driver.get(url)
-        #print encode_wrap("使用代理:"), myProxy
-        print encode_wrap("使用代理:{}:{}".format(http, port))
+        print encode_wrap("使用代理:"), myProxy
+
 
         # except Exception,e:
         #     print encode_wrap('连接超时, 重试' )
