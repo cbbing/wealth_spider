@@ -119,7 +119,7 @@ class XueQiu:
     def get_proxies(self):
 
         if len(self.df_ip) > 0:
-            print len(self.df_ip)
+            #print len(self.df_ip)
             index = random.randint(0, len(self.df_ip))
             http = self.df_ip.ix[index, 'Type']
             http = str(http).lower()
@@ -195,30 +195,30 @@ class XueQiu:
 
 
 
-    def get_request(self, url):
-
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/31.0.1650.57 Safari/537.36'}
-
-        try_times = 3
-        while (try_times > 0):
-
-            proxies = self.get_proxies()
-            print encode_wrap( '获取大V信息:%s:使用代理:' % url), proxies
-            try:
-                r = requests.get(url, headers=headers, proxies=proxies, timeout=5)
-                return r
-            except:
-                if proxies.has_key('http'):
-                    myProxy = proxies['http']
-                elif proxies.has_key('https'):
-                    myProxy = proxies['https']
-                m =re.search('//([\d\.]+):', myProxy)
-                if m:
-                    ip = m.group(1)
-                    #self.df_ip
-
-                print encode_wrap('连接超时, 重试%s' % (3 - try_times + 1))
-                try_times -= 1
+    # def get_request(self, url):
+    #
+    #     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/31.0.1650.57 Safari/537.36'}
+    #
+    #     try_times = 3
+    #     while (try_times > 0):
+    #
+    #         proxies = self.get_proxies()
+    #         print encode_wrap( '获取大V信息:%s:使用代理:' % url), proxies
+    #         try:
+    #             r = requests.get(url, headers=headers, proxies=proxies, timeout=5)
+    #             return r
+    #         except:
+    #             if proxies.has_key('http'):
+    #                 myProxy = proxies['http']
+    #             elif proxies.has_key('https'):
+    #                 myProxy = proxies['https']
+    #             m =re.search('//([\d\.]+):', myProxy)
+    #             if m:
+    #                 ip = m.group(1)
+    #                 #self.df_ip
+    #
+    #             print encode_wrap('连接超时, 重试%s' % (3 - try_times + 1))
+    #             try_times -= 1
 
 
     # 获取大V基本信息
@@ -233,7 +233,7 @@ class XueQiu:
         try:
             url = 'http://xueqiu.com/%s' % str(id)
             print url
-            r = get_requests(url, self.df_ip)
+            r = get_requests(url)
             #r = self.get_request(url)
             soup = BeautifulSoup(r.text, 'html5lib')
 
@@ -598,6 +598,68 @@ class XueQiu:
         for user_id in user_ids:
             self.get_fans_list(user_id)
 
+    # 获取指定用户的动态列表(非JS数据)
+    def get_user_activity_info(self, user_id):
+        url = 'http://xueqiu.com/{}'.format(user_id)
+        print url
+        #r = get_requests(url, self.df_ip)
+        driver = self.get_web_driver(url)
+        max_window(driver)
+
+        # 获取原发布的总页码
+        soup = BeautifulSoup(driver.page_source, 'html5lib')
+        page_count = self._get_page_count(soup, 'statusLists')
+
+        # 获取数据库中的最新发表文章时间
+        sql = "select max(publish_time) as publish_time from {0} where user_id='{1}'".format(archive_table_mysql, user_id)
+        df = pd.read_sql_query(sql, engine)
+        if len(df) > 0 and not df.ix[0, 'publish_time'] is None:
+            publish_time_lastest = df.ix[0, 'publish_time']
+
+            print str(publish_time_lastest)
+
+        # 获取每页文章列表
+        current_page = 1
+        while(current_page < page_count+1):
+            print "Page:%d / %d" % (current_page, page_count)
+
+            archiveList = self._get_archive_list_in_one_page(soup, user_id)
+
+            # 存入mysql
+            #[archive.to_mysql() for archive in archiveList if not archive.check_exists()]
+            [archive.to_mysql() for archive in archiveList] #不需判断数据库是否存在,若存在则抛出异常,不插入
+
+
+            if len(archiveList) > 0:
+
+                archive = archiveList[-1]
+
+                # 判断是否存在最新文章
+                if archive.publish_time < str(publish_time_lastest):
+                    break
+
+                # 判断文章是否为最近一年发布，若否则不继续搜索
+                nowDate = GetNowTime2()
+                now_year = int(nowDate[:4])
+                last_year = nowDate.replace(str(now_year), str(now_year-1)) # 去年今日
+                if archive.publish_time < last_year:
+                    break
+
+            # 点击下一页
+            clickStatus = self._click_next_page(driver,'//ul[@class="status-list"]', current_page+1)
+            if clickStatus:
+                soup = BeautifulSoup(driver.page_source, 'html5lib')
+                current_page += 1
+                wait_time = self._get_wait_time()
+                time.sleep(wait_time)
+                print 'Page:{}   Wait time:{}'.format(current_page, wait_time)
+            else:
+                print encode_wrap('点击下一页出错, 退出...')
+                break
+
+
+        driver.quit()
+
 
     ### 类中的辅助函数
 
@@ -691,7 +753,7 @@ class XueQiu:
                         archive.title = titleH4.find('a').get_text()
                         archive.href = self.site + titleH4.find('a')['href']
                     except:
-                        print 'no title and href'
+                        print 'arctive has no title and href'
 
                     ops = status.find('div', {'class':'ops'})
                     repost = ops.find('a', {'class':'repost second'}).get_text()
@@ -707,8 +769,9 @@ class XueQiu:
                     print e
         except Exception, e:
                 print e
-            
+
         return archiveList
+
 
 
     # 获取等待时间(随机)
@@ -822,7 +885,12 @@ class Article:
     # 规整化发表时间
     def regularization_time(self, publish_time):
         now = GetNowDate()
-        if '今天' in publish_time:
+        if '分钟前' in publish_time: # 22分钟前
+            publish_time = publish_time.replace('分钟前','')
+            publish_time = time.time() - int(publish_time)*60
+            publish_time = GetTime(publish_time)
+
+        elif '今天' in publish_time:
             publish_time = publish_time.replace('今天', now)
         elif len(publish_time) == 11:
             publish_time = time.strftime("%Y-",time.localtime(time.time())) + publish_time
@@ -863,7 +931,8 @@ if __name__ == "__main__":
 
     xueqiu = XueQiu()
     #xueqiu.get_web_driver('http://www.baidu.com')
-    xueqiu.run_get_big_v()
+    #xueqiu.run_get_big_v()
+    xueqiu.get_user_activity_info(init_id)
 
     #xueqiu.get_unfinished_big_v()
     #xueqiu.get_publish_articles()
