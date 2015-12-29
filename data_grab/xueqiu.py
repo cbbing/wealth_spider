@@ -478,7 +478,9 @@ class XueQiu:
             if clickStatus:
                 soup = BeautifulSoup(driver.page_source, 'html5lib')
                 current_page += 1
-                time.sleep(self._get_wait_time())
+                wait_time = self._get_wait_time()
+                time.sleep(wait_time)
+                print 'Page:{}   Wait time:{}'.format(current_page, wait_time)
             else:
                 print encode_wrap('点击下一页出错, 退出...')
                 break
