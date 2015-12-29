@@ -41,7 +41,7 @@ class XueQiu:
         #self.driver = webdriver.Firefox()
         #self.df_ip = pd.read_excel('../Data/ip_proxy_2015-11-25.xlsx','Sheet1') #ip代理地址库
         mysql_table_ip = 'ip_proxy'
-        sql = 'select * from {0} order by Speed limit {1}'.format(mysql_table_ip, 500)
+        sql = 'select * from {0} where Speed > 0 order by Speed limit {1}'.format(mysql_table_ip, 1000)
         self.df_ip = pd.read_sql_query(sql, engine)
 
         # ip_file = "../Data/ip_proxy_%s.csv" % GetNowDate()
@@ -59,7 +59,7 @@ class XueQiu:
 
         self.init_time = time.time()
         self.site = 'http://xueqiu.com'
-        self.sleep_time = int(cf.get('web', 'wait_time'))  # second
+        #self.sleep_time = int(cf.get('web', 'wait_time'))  # second
 
         #self.init_database()
 
@@ -360,7 +360,7 @@ class XueQiu:
                     current_page += 1
 
                     t1 = time.time()
-                    wait_time = max((self.sleep_time - (t1-t0)), 0)
+                    wait_time = max((self._get_wait_time() - (t1-t0)), 0)
                     time.sleep(wait_time)
                     print 'Page:{}   Wait time:{}'.format(current_page, wait_time)
 
@@ -478,7 +478,7 @@ class XueQiu:
             if clickStatus:
                 soup = BeautifulSoup(driver.page_source, 'html5lib')
                 current_page += 1
-                time.sleep(self.sleep_time)
+                time.sleep(self._get_wait_time())
             else:
                 print encode_wrap('点击下一页出错, 退出...')
                 break
@@ -708,6 +708,15 @@ class XueQiu:
             
         return archiveList
 
+
+    # 获取等待时间(随机)
+    def _get_wait_time(self):
+        cf = ConfigParser.ConfigParser()
+        cf.read('../config.ini')
+
+        wait_time = int(cf.get('web', 'wait_time'))  # second
+        wait_time_random = random.randint(wait_time, wait_time*2)
+        return wait_time_random
 
 class User:
     def __init__(self):
