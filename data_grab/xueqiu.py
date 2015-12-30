@@ -31,6 +31,7 @@ from db_config import *
 from IPProxy.ip_proxy import IP_Proxy
 from util.helper import fn_timer
 from util.webHelper import max_window, get_requests
+from util.CodeConvert import regularization_time
 
 
 
@@ -611,12 +612,7 @@ class XueQiu:
         page_count = self._get_page_count(soup, 'statusLists')
 
         # 获取数据库中的最新发表文章时间
-        sql = "select max(publish_time) as publish_time from {0} where user_id='{1}'".format(archive_table_mysql, user_id)
-        df = pd.read_sql_query(sql, engine)
-        if len(df) > 0 and not df.ix[0, 'publish_time'] is None:
-            publish_time_lastest = df.ix[0, 'publish_time']
-
-            print str(publish_time_lastest)
+        publish_time_lastest = self._get_lastest_publish_time(archive_table_mysql, user_id)
 
         # 获取每页文章列表
         current_page = 1
@@ -626,7 +622,6 @@ class XueQiu:
             archiveList = self._get_archive_list_in_one_page(soup, user_id)
 
             # 存入mysql
-            #[archive.to_mysql() for archive in archiveList if not archive.check_exists()]
             [archive.to_mysql() for archive in archiveList] #不需判断数据库是否存在,若存在则抛出异常,不插入
 
 
@@ -680,6 +675,26 @@ class XueQiu:
             page_count = 1
         return  page_count
 
+    def _get_lastest_publish_time(self, table, user_id):
+        """
+        获取数据库中的最新发表文章时间
+        :param table:
+        :param user_id:
+        :return:
+        """
+
+        publish_time_lastest = '2000-01-01 00:00:00'
+        try:
+            sql = "select max(publish_time) as publish_time from {0} where user_id='{1}'".format(table, user_id)
+            df = pd.read_sql_query(sql, engine)
+            if len(df) > 0 and not df.ix[0, 'publish_time'] is None:
+                publish_time_lastest = df.ix[0, 'publish_time']
+
+                print str(publish_time_lastest)
+        except Exception,e:
+            print e
+
+        return publish_time_lastest
 
     # 点击下一页
     def _click_next_page(self, driver, xpath,  current_page):
@@ -744,7 +759,7 @@ class XueQiu:
 
                     archive.detail = status.find('div', {'class':'detail'}).get_text()
                     infos = status.find('div', {'class':'infos'})
-                    archive.publish_time = archive.regularization_time(infos.find('a', {'class':'time'}).get_text())
+                    archive.publish_time = regularization_time(infos.find('a', {'class':'time'}).get_text())
                     archive.device = infos.find('span').get_text().replace('来自', '')
 
                     try:
@@ -777,7 +792,7 @@ class XueQiu:
     # 获取等待时间(随机)
     def _get_wait_time(self):
         cf = ConfigParser.ConfigParser()
-        cf.read('../config.ini')
+        cf.read('./config.ini')
 
         wait_time = int(cf.get('web', 'wait_time'))  # second
         wait_time_random = random.randint(wait_time, wait_time*2)
@@ -882,20 +897,20 @@ class Article:
             print encode_wrap('数据库中表不存在:%s' % big_v_table_mysql)
             return False
 
-    # 规整化发表时间
-    def regularization_time(self, publish_time):
-        now = GetNowDate()
-        if '分钟前' in publish_time: # 22分钟前
-            publish_time = publish_time.replace('分钟前','')
-            publish_time = time.time() - int(publish_time)*60
-            publish_time = GetTime(publish_time)
-
-        elif '今天' in publish_time:
-            publish_time = publish_time.replace('今天', now)
-        elif len(publish_time) == 11:
-            publish_time = time.strftime("%Y-",time.localtime(time.time())) + publish_time
-
-        return publish_time
+    # # 规整化发表时间
+    # def regularization_time(self, publish_time):
+    #     now = GetNowDate()
+    #     if '分钟前' in publish_time: # 22分钟前
+    #         publish_time = publish_time.replace('分钟前','')
+    #         publish_time = time.time() - int(publish_time)*60
+    #         publish_time = GetTime(publish_time)
+    #
+    #     elif '今天' in publish_time:
+    #         publish_time = publish_time.replace('今天', now)
+    #     elif len(publish_time) == 11:
+    #         publish_time = time.strftime("%Y-",time.localtime(time.time())) + publish_time
+    #
+    #     return publish_time
 
 
     def to_mysql(self):

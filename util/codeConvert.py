@@ -32,3 +32,25 @@ def GetNowTim3():
 
 def GetNowDate():
     return time.strftime("%Y-%m-%d",time.localtime(time.time()))
+
+# 规整化发表时间
+def regularization_time(publish_time):
+    now = GetNowDate()
+    if '分钟前' in publish_time: # 22分钟前
+        publish_time = publish_time.replace('分钟前','')
+        publish_time = time.time() - int(publish_time)*60
+        publish_time = GetTime(publish_time)
+
+    elif '今天' in publish_time:
+        publish_time = publish_time.replace('今天', now) + ':00'
+
+    elif '月' in publish_time:
+        publish_time = publish_time.replace('月','-').replace('日','')
+        publish_time = time.strftime("%Y-",time.localtime(time.time())) + publish_time + ':00'
+    elif len(publish_time) == 5: # 形如14:58
+        publish_time = now + " " + publish_time + ":00"
+    elif len(publish_time) == 11:
+        publish_time = time.strftime("%Y-",time.localtime(time.time())) + publish_time + ':00'
+
+
+    return publish_time
