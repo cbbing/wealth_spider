@@ -10,7 +10,7 @@ db = web.database(dbn='mysql', db=db_name_mysql, host=host_mysql, port=port_mysq
 def get_posts_xueqiu():
 
     ids = cf.get('user_id', 'xueqiu').split(',')
-    return db.select(archive_table_mysql, where='user_id in ({0})'.format(','.join(ids)), order='publish_time DESC', limit=10)
+    return db.select(mysql_table_xueqiu_article, where='user_id in ({0})'.format(','.join(ids)), order='publish_time DESC', limit=10)
     #return db.select('entries', order='id DESC')
 
 def get_posts_weibo():
