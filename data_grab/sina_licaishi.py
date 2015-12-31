@@ -135,6 +135,9 @@ class Licaishi:
 
         try:
 
+            name = soup.find('title').get_text()
+            name = name.replace('的个人主页_新浪理财师','').strip()
+
             statusAll = soup.find('div', {'class':'s_left'})
             statusList = statusAll.findAll('div', {'class':'s_widget w_vp'})
             for status in statusList:
@@ -143,6 +146,7 @@ class Licaishi:
 
                     archive = Article()
                     archive.user_id = user_id
+                    archive.user_name = name
 
                     h2_title = status.find('h2', {'class':'w_vp_h2'})
                     if h2_title:
@@ -220,6 +224,7 @@ class Licaishi:
 class Article:
     def __init__(self):
         self.user_id = ''
+        self.user_name = ''
         self.title = ''
         self.detail = ''
         self.publish_time = ''
@@ -238,6 +243,7 @@ class Article:
         try:
 
             df = DataFrame({'user_id':[self.user_id],
+                            'user_name':[self.user_name],
                             'title':[self.title],
                             'detail': [self.detail],
                             'publish_time':[self.publish_time],
@@ -252,7 +258,7 @@ class Article:
                             'device':[self.device],# ]
 
                             },
-                           columns=['user_id', 'title', 'detail',
+                           columns=['user_id', 'user_name', 'title', 'detail',
                                     'publish_time', 'href','watch_count',
                                     'repost_count', 'donate_count',
                                     'comment_count', 'device'])

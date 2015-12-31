@@ -153,6 +153,9 @@ class Weibo:
 
         try:
 
+            name = soup.find('title').get_text()
+            name = name.replace('的微博','').strip()
+
             #statusAll = soup.find('div', {'class':'c'})
             statusList = soup.findAll('div', {'class':'c'})
             for status in statusList:
@@ -161,6 +164,7 @@ class Weibo:
 
                     archive = Article()
                     archive.user_id = user_id
+                    archive.user_name = name
 
                     archive.detail = status.find('span', {'class':'ctt'}).get_text()
 
@@ -214,7 +218,7 @@ class Weibo:
     # 获取等待时间(随机)
     def _get_wait_time(self):
         cf = ConfigParser.ConfigParser()
-        cf.read('./config.ini')
+        cf.read('../config.ini')
 
         wait_time = int(cf.get('web', 'wait_time'))  # second
         wait_time_random = random.randint(wait_time, wait_time*2)
@@ -254,6 +258,7 @@ class Weibo:
 class Article:
     def __init__(self):
         self.user_id = ''
+        self.user_name = ''
         # self.title = ''
         self.detail = ''
         self.publish_time = ''
@@ -272,6 +277,7 @@ class Article:
 
             df = DataFrame({'user_id':[self.user_id],
                             #'title':[self.title],
+                            'user_name':[self.user_name],
                             'detail': [self.detail],
                             'publish_time':[self.publish_time],
                             'device':[self.device],
@@ -284,18 +290,21 @@ class Article:
                             'repost_reason':[self.repost_reason]
 
                             },
-                           columns=['user_id', 'detail',
+                           columns=['user_id', 'user_name', 'detail',
                                     'publish_time', 'repost_count', 'donate_count',
                                     'comment_count', 'repost_reason', 'is_repost', 'is_top', 'device'])
             print df
 
-            sql_del = "delete from {table} where user_id='{user_id}' and detail='{detail}' and publish_time='{publish_time}'".format(
-                    table = mysql_table_weibo_article,
-                    user_id = self.user_id,
-                    detail = self.detail,
-                    publish_time = self.publish_time
-                    )
-            engine.execute(sql_del)
+            try:
+                sql_del = "delete from {table} where user_id='{user_id}' and detail='{detail}' and publish_time='{publish_time}'".format(
+                        table = mysql_table_weibo_article,
+                        user_id = self.user_id,
+                        detail = self.detail,
+                        publish_time = self.publish_time
+                        )
+                engine.execute(sql_del)
+            except Exception,e:
+                print 'delete error!  table:{} not exist!'.format(mysql_table_weibo_article)
 
             df.to_sql(mysql_table_weibo_article, engine, if_exists='append', index=False)
             return True

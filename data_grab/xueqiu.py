@@ -30,7 +30,7 @@ from util.CodeConvert import *
 from db_config import *
 from IPProxy.ip_proxy import IP_Proxy
 from util.helper import fn_timer
-from util.webHelper import max_window, get_requests
+from util.webHelper import max_window, get_requests, get_web_driver
 from util.CodeConvert import regularization_time
 
 
@@ -604,7 +604,7 @@ class XueQiu:
         url = 'http://xueqiu.com/{}'.format(user_id)
         print url
         #r = get_requests(url, self.df_ip)
-        driver = self.get_web_driver(url)
+        driver = get_web_driver(url, has_proxy=False)
         max_window(driver)
 
         # 获取原发布的总页码
@@ -747,6 +747,8 @@ class XueQiu:
         archiveList = []
 
         try:
+            name = soup.find('title').get_text()
+            name = name.replace('-','').replace('雪球', '').strip()
 
             statusAll = soup.find('ul', {'class':'status-list'})
             statusList = statusAll.findAll('li')
@@ -756,7 +758,7 @@ class XueQiu:
 
                     archive = Article()
                     archive.user_id = id
-
+                    archive.user_name = name
                     archive.detail = status.find('div', {'class':'detail'}).get_text()
                     infos = status.find('div', {'class':'infos'})
                     archive.publish_time = regularization_time(infos.find('a', {'class':'time'}).get_text())
@@ -858,6 +860,7 @@ class User:
 class Article:
     def __init__(self):
         self.user_id = ''
+        self.user_name = ''
         self.title = ''
         self.detail = ''
         self.publish_time = ''
@@ -897,27 +900,13 @@ class Article:
             print encode_wrap('数据库中表不存在:%s' % big_v_table_mysql)
             return False
 
-    # # 规整化发表时间
-    # def regularization_time(self, publish_time):
-    #     now = GetNowDate()
-    #     if '分钟前' in publish_time: # 22分钟前
-    #         publish_time = publish_time.replace('分钟前','')
-    #         publish_time = time.time() - int(publish_time)*60
-    #         publish_time = GetTime(publish_time)
-    #
-    #     elif '今天' in publish_time:
-    #         publish_time = publish_time.replace('今天', now)
-    #     elif len(publish_time) == 11:
-    #         publish_time = time.strftime("%Y-",time.localtime(time.time())) + publish_time
-    #
-    #     return publish_time
-
 
     def to_mysql(self):
 
         try:
 
             df = DataFrame({'user_id':[self.user_id],
+                            'user_name':[self.user_name],
                             'title':[self.title],
                             'detail': [self.detail],
                             'publish_time':[self.publish_time],
@@ -927,10 +916,22 @@ class Article:
                             'donate_count':[self.donate_count],
                             'comment_count':[self.comment_count]
                             },
-                           columns=['user_id', 'title', 'detail',
+                           columns=['user_id', 'user_name', 'title', 'detail',
                                     'publish_time', 'repost_count', 'donate_count',
                                     'comment_count', 'device', 'href'])
             print df
+
+            try:
+                sql_del = "delete from {table} where user_id='{user_id}' and detail='{detail}' and publish_time='{publish_time}'".format(
+                        table = mysql_table_xueqiu_article,
+                        user_id = self.user_id,
+                        detail = self.detail,
+                        publish_time = self.publish_time
+                        )
+                engine.execute(sql_del)
+            except Exception,e:
+                print 'delete error!  table:{} not exist!'.format(mysql_table_xueqiu_article)
+
             df.to_sql(mysql_table_xueqiu_article, engine, if_exists='append', index=False)
             return True
 
@@ -946,8 +947,8 @@ if __name__ == "__main__":
 
     xueqiu = XueQiu()
     #xueqiu.get_web_driver('http://www.baidu.com')
-    xueqiu.run_get_big_v()
-    #xueqiu.get_user_activity_info(init_id)
+    #xueqiu.run_get_big_v()
+    xueqiu.get_user_activity_info(init_id)
 
     #xueqiu.get_unfinished_big_v()
     #xueqiu.get_publish_articles()
