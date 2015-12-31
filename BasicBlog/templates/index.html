@@ -1,0 +1,28 @@
+$def with (posts)
+
+<h1>微博——最新动态</h1>
+
+
+
+<ul>
+
+<table border="1">
+    <tr>
+        <th>发布时间</th>
+        <th>内容</th>
+        <th>评论转发</th>
+        <th>来自</th>
+        <th>链接</th>
+    </tr>
+$for post in posts:
+    <tr>
+        <td>$post.publish_time</td>
+        <td>$post.repost_reason  $post.detail</td>
+        <td>赞[$post.donate_count],转发[$post.repost_count],评论[$post.comment_count]</td>
+        <td>$post.device</td>
+        <td><a href="http://weibo.com/$post.user_id">$post.user_id</a></td>
+    </tr>
+
+</table>
+
+</ul>
