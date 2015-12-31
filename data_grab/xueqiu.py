@@ -931,7 +931,7 @@ class Article:
                                     'publish_time', 'repost_count', 'donate_count',
                                     'comment_count', 'device', 'href'])
             print df
-            df.to_sql(archive_table_mysql, engine, if_exists='append', index=False)
+            df.to_sql(mysql_table_xueqiu_article, engine, if_exists='append', index=False)
             return True
 
         except Exception,e:

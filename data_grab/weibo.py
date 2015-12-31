@@ -45,8 +45,8 @@ class Weibo:
         # for key in dict_cookie.keys():
         #     data_cookie += "{}={};".format(key, dict_cookie[key])
 
-        f = open(self.dir_temp + 'cookie','w')
-        pickle.dump(cookie, f)
+        # f = open(self.dir_temp + 'cookie','w')
+        # pickle.dump(cookie, f)
 
         return driver
 

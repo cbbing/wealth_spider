@@ -40,7 +40,7 @@ def get_requests(url, has_proxy=True, cookie=None):
     if has_proxy:
         proxy = get_proxies()
     cf = ConfigParser.ConfigParser()
-    cf.read('./config.ini')
+    cf.read('../config.ini')
     timeout = int(cf.get('web', 'timeout'))
 
     r = requests.get(url, proxies=proxy, headers=headers, cookies=cookie,timeout=timeout)
