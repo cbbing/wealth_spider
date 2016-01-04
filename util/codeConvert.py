@@ -49,7 +49,7 @@ def regularization_time(publish_time):
         publish_time = time.strftime("%Y-",time.localtime(time.time())) + publish_time + ':00'
     elif len(publish_time) == 5: # 形如14:58
         publish_time = now + " " + publish_time + ":00"
-    elif len(publish_time) == 11:
+    elif len(publish_time) == 16: #形如2015-09-29 12:38
         publish_time = time.strftime("%Y-",time.localtime(time.time())) + publish_time + ':00'
 
 
