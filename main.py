@@ -17,10 +17,13 @@ def refresh_web_in_real_time():
 
     func_list = [run_weibo, run_licaishi,run_xueqiu] #run_weibo, run_licaishi,run_xueqiu,
     #多线程
-    pool = ThreadPool(processes=3)
-    pool.map(run, func_list)
-    pool.close()
-    pool.join()
+    # pool = ThreadPool(processes=3)
+    # pool.map(run, func_list)
+    # pool.close()
+    # pool.join()
+
+    for func in func_list:
+        run(func)
 
 def run(func):
     func()
