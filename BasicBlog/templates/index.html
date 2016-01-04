@@ -16,11 +16,11 @@ $def with (posts)
     </tr>
 $for post in posts:
     <tr>
-        <td>$post.publish_time</td>
-        <td>$post.repost_reason  $post.detail</td>
-        <td>赞[$post.donate_count],转发[$post.repost_count],评论[$post.comment_count]</td>
-        <td>$post.device</td>
-        <td><a href="http://weibo.com/$post.user_id">$post.user_name</a></td>
+        <td width="100">$post.publish_time</td>
+        <td width="800">$post.repost_reason<br>$post.detail</td>
+        <td width="80">赞[$post.donate_count]<br>转发[$post.repost_count]<br>评论[$post.comment_count]</td>
+        <td width="80">$post.device</td>
+        <td width="80"><a href="http://weibo.com/$post.user_id">$post.user_name</a></td>
     </tr>
 
 </table>
