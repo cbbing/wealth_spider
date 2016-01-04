@@ -630,10 +630,10 @@ class XueQiu:
                 archive = archiveList[-1]
 
                 # 判断是否存在最新文章
-                d1 = str_to_datatime(archive.publish_time)
-                d2 = str_to_datatime(str(publish_time_lastest))
-                if d1 < d2:
-                #if archive.publish_time < str(publish_time_lastest):
+                #d1 = str_to_datatime(archive.publish_time)
+                #d2 = str_to_datatime(str(publish_time_lastest))
+                #if d1 < d2:
+                if archive.publish_time < str(publish_time_lastest):
                     print encode_wrap('雪球: 已经是最新的动态了')
                     break
 
