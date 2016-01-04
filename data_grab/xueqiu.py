@@ -612,7 +612,7 @@ class XueQiu:
         page_count = self._get_page_count(soup, 'statusLists')
 
         # 获取数据库中的最新发表文章时间
-        publish_time_lastest = self._get_lastest_publish_time(archive_table_mysql, user_id)
+        publish_time_lastest = self._get_lastest_publish_time(mysql_table_xueqiu_article, user_id)
 
         # 获取每页文章列表
         current_page = 1
@@ -630,7 +630,11 @@ class XueQiu:
                 archive = archiveList[-1]
 
                 # 判断是否存在最新文章
-                if archive.publish_time < str(publish_time_lastest):
+                d1 = str_to_datatime(archive.publish_time)
+                d2 = str_to_datatime(str(publish_time_lastest))
+                if d1 < d2:
+                #if archive.publish_time < str(publish_time_lastest):
+                    print encode_wrap('雪球: 已经是最新的动态了')
                     break
 
                 # 判断文章是否为最近一年发布，若否则不继续搜索

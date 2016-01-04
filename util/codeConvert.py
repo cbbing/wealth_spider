@@ -1,6 +1,7 @@
 # -*- coding: utf8 -*-
 
 import sys, time
+import datetime
 
 #console stdout
 def encode_wrap(str):
@@ -14,6 +15,9 @@ def str_qt_to_utf(qt_str):
     utf_str = unicode(qt_str.toUtf8(), 'utf-8', 'ignore')
     return utf_str
 
+def str_to_datatime(str_time, format='%Y-%m-%d %H:%M:%S'):
+    d = datetime.datetime.strptime(str_time, format)
+    return d
 
 def GetDate(timefrom1970):
     return time.strftime("%Y-%m-%d",time.localtime(timefrom1970))
@@ -49,8 +53,10 @@ def regularization_time(publish_time):
         publish_time = time.strftime("%Y-",time.localtime(time.time())) + publish_time + ':00'
     elif len(publish_time) == 5: # 形如14:58
         publish_time = now + " " + publish_time + ":00"
-    elif len(publish_time) == 16: #形如2015-09-29 12:38
+    elif len(publish_time) == 11: #形如09-29 12:38
         publish_time = time.strftime("%Y-",time.localtime(time.time())) + publish_time + ':00'
+    elif len(publish_time) == 16: #形如2015-09-29 12:38
+        publish_time = publish_time + ':00'
 
 
     return publish_time
