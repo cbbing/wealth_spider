@@ -10,17 +10,17 @@ db = web.database(dbn='mysql', db=db_name_mysql, host=host_mysql, port=port_mysq
 def get_posts_xueqiu():
 
     ids = cf.get('user_id', 'xueqiu').split(',')
-    return db.select(mysql_table_xueqiu_article, order='publish_time DESC', limit=10) # where='user_id in ({0})'.format(','.join(ids)),
+    return db.select(mysql_table_xueqiu_article, order='publish_time DESC', limit=100) # where='user_id in ({0})'.format(','.join(ids)),
     #return db.select('entries', order='id DESC')
 
 def get_posts_weibo():
     ids = cf.get('user_id', 'weibo').split(',')
-    return db.select(mysql_table_weibo_article,  order='publish_time DESC', limit=10) #where='user_id in ({0})'.format(','.join(ids)),
+    return db.select(mysql_table_weibo_article,  order='publish_time DESC', limit=100) #where='user_id in ({0})'.format(','.join(ids)),
     #return db.select('entries', order='id DESC')
 
 def get_posts_licaishi():
     ids = cf.get('user_id', 'licaishi').split(',')
-    return db.select(mysql_table_licaishi_viewpoint,  order='publish_time DESC', limit=10) # where='user_id in ({0})'.format(','.join(ids)),
+    return db.select(mysql_table_licaishi_viewpoint,  order='publish_time DESC', limit=100) # where='user_id in ({0})'.format(','.join(ids)),
     #return db.select('entries', order='id DESC')
 
 def get_post(id):
