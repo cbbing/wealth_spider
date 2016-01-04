@@ -304,7 +304,7 @@ class Article:
                         )
                 engine.execute(sql_del)
             except Exception,e:
-                print 'delete error!  table:{} not exist!'.format(mysql_table_weibo_article)
+                print 'delete error!', str(e)
 
             df.to_sql(mysql_table_weibo_article, engine, if_exists='append', index=False)
             return True

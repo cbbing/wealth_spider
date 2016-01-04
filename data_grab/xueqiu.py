@@ -794,7 +794,7 @@ class XueQiu:
     # 获取等待时间(随机)
     def _get_wait_time(self):
         cf = ConfigParser.ConfigParser()
-        cf.read('./config.ini')
+        cf.read('../config.ini')
 
         wait_time = int(cf.get('web', 'wait_time'))  # second
         wait_time_random = random.randint(wait_time, wait_time*2)
@@ -930,7 +930,7 @@ class Article:
                         )
                 engine.execute(sql_del)
             except Exception,e:
-                print 'delete error!  table:{} not exist!'.format(mysql_table_xueqiu_article)
+                print 'delete error! ', str(e)
 
             df.to_sql(mysql_table_xueqiu_article, engine, if_exists='append', index=False)
             return True
