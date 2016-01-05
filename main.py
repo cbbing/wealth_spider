@@ -7,6 +7,7 @@ from util.helper import fn_timer
 
 from multiprocessing.dummy import Pool as ThreadPool
 import ConfigParser
+import sys
 
 cf = ConfigParser.ConfigParser()
 cf.read('../config.ini')
@@ -53,5 +54,18 @@ def run_licaishi():
     [licaishi.get_licaishi_viewpoint_list(user_id) for user_id in licaishi_user_list]
 
 
+def run_xueqiu_big_v():
+
+    init_id = cf.get('start', 'init_id').strip()
+
+    xueqiu = XueQiu()
+    xueqiu.run_get_big_v()
+    #xueqiu.get_user_activity_info(init_id)
+
+
 if __name__ == "__main__":
-    refresh_web_in_real_time()
+
+    if len(sys.argv) == 1:
+        refresh_web_in_real_time()
+    elif len(sys.argv) == 2:
+        run_xueqiu_big_v()
