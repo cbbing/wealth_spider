@@ -29,29 +29,34 @@ def run(func):
     func()
 
 def run_xueqiu():
+    try:
+        user_ids = cf.get('user_id', 'xueqiu').split(',')
 
-    user_ids = cf.get('user_id', 'xueqiu').split(',')
-
-    xueqiu = XueQiu()
-    xueqiu_user_list = user_ids
-    [xueqiu.get_user_activity_info(user_id) for user_id in xueqiu_user_list]
+        xueqiu = XueQiu()
+        xueqiu_user_list = user_ids
+        [xueqiu.get_user_activity_info(user_id) for user_id in xueqiu_user_list]
+    except Exception,e:
+        print e
 
 def run_weibo():
+    try:
+        user_ids = cf.get('user_id', 'weibo').split(',')
 
-    user_ids = cf.get('user_id', 'weibo').split(',')
-
-    weibo = Weibo()
-    weibo_user_list = user_ids
-    [weibo.get_weibo_list(user_id) for user_id in weibo_user_list]
+        weibo = Weibo()
+        weibo_user_list = user_ids
+        [weibo.get_weibo_list(user_id) for user_id in weibo_user_list]
+    except Exception,e:
+        print e
 
 def run_licaishi():
+    try:
+        user_ids = cf.get('user_id', 'licaishi').split(',')
 
-    user_ids = cf.get('user_id', 'licaishi').split(',')
-
-    licaishi = Licaishi()
-    licaishi_user_list = user_ids
-    [licaishi.get_licaishi_viewpoint_list(user_id) for user_id in licaishi_user_list]
-
+        licaishi = Licaishi()
+        licaishi_user_list = user_ids
+        [licaishi.get_licaishi_viewpoint_list(user_id) for user_id in licaishi_user_list]
+    except Exception,e:
+        print e
 
 if __name__ == "__main__":
     refresh_web_in_real_time()
