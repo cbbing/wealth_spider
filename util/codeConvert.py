@@ -43,7 +43,8 @@ def regularization_time(publish_time):
     if '分钟前' in publish_time: # 22分钟前
         publish_time = publish_time.replace('分钟前','')
         publish_time = time.time() - int(publish_time)*60
-        publish_time = GetTime(publish_time)
+        publish_time = time.strftime("%Y-%m-%d %H:%M",time.localtime(publish_time))
+        publish_time = publish_time +  ':00'
 
     elif '今天' in publish_time:
         publish_time = publish_time.replace('今天', now) + ':00'

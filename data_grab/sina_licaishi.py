@@ -14,7 +14,7 @@ from pandas import DataFrame
 from bs4 import BeautifulSoup as bs
 
 from util.webHelper import get_web_driver, get_requests
-from util.CodeConvert import regularization_time, encode_wrap
+from util.codeConvert import regularization_time, encode_wrap
 from db_config import mysql_table_licaishi_viewpoint, engine
 
 class Licaishi:
@@ -22,7 +22,7 @@ class Licaishi:
     def __init__(self):
         self.site = 'http://licaishi.sina.com.cn'
         self.url = self.site + '/planner/{user_id}/4?page={pid}'
-        self.max_page_count = 10
+        self.max_page_count = 5
 
         self.dir_temp = './Data/Temp/'
 

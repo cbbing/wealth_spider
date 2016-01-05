@@ -26,12 +26,12 @@ from retrying import retry
 from multiprocessing.dummy import Pool as ThreadPool
 from multiprocessing import Pool
 
-from util.CodeConvert import *
+from util.codeConvert import *
 from db_config import *
 from IPProxy.ip_proxy import IP_Proxy
 from util.helper import fn_timer
 from util.webHelper import max_window, get_requests, get_web_driver
-from util.CodeConvert import regularization_time
+from util.codeConvert import regularization_time
 
 
 
@@ -656,6 +656,8 @@ class XueQiu:
                 print encode_wrap('点击下一页出错, 退出...')
                 break
 
+            if current_page > 5:
+                break
 
         driver.quit()
 

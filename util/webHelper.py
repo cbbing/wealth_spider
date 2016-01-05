@@ -15,7 +15,7 @@ from retrying import retry
 from selenium import webdriver
 from selenium.webdriver.common.proxy import *
 
-from CodeConvert import encode_wrap, GetNowDate
+from codeConvert import encode_wrap, GetNowDate
 from db_config import engine
 
 # 浏览器的窗口最大化

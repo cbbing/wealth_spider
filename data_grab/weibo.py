@@ -12,14 +12,14 @@ from pandas import DataFrame
 from bs4 import BeautifulSoup as bs
 
 from util.webHelper import get_web_driver, get_requests
-from util.CodeConvert import regularization_time, encode_wrap
+from util.codeConvert import regularization_time, encode_wrap
 from db_config import mysql_table_weibo_article, engine
 
 class Weibo:
 
     def __init__(self):
         self.url = 'http://weibo.cn/{user_id}'
-        self.max_page_count = 20
+        self.max_page_count = 5
 
         self.dir_temp = './Data/Temp/'
 
