@@ -15,7 +15,7 @@ from retrying import retry
 from selenium import webdriver
 from selenium.webdriver.common.proxy import *
 
-from CodeConvert import encode_wrap, GetNowDate
+from codeConvert import encode_wrap, GetNowDate
 from db_config import engine
 
 # 浏览器的窗口最大化
@@ -61,35 +61,34 @@ def get_web_driver(url, has_proxy=True):
     :return driver:
     """
 
-    proxies = get_proxies()
-    if proxies.has_key('http'):
-        myProxy = proxies['http']
-    elif proxies.has_key('https'):
-        myProxy = proxies['https']
-
-    proxy = Proxy({
-       'proxyType': ProxyType.MANUAL,
-        'httpProxy': myProxy,
-        # 'ftpProxy': myProxy,
-        # 'sslProxy': myProxy,
-        # 'noProxy':d ''
-    })
-
     if has_proxy:
+        proxies = get_proxies()
+        if proxies.has_key('http'):
+            myProxy = proxies['http']
+        elif proxies.has_key('https'):
+            myProxy = proxies['https']
+
+        proxy = Proxy({
+           'proxyType': ProxyType.MANUAL,
+            'httpProxy': myProxy,
+            # 'ftpProxy': myProxy,
+            # 'sslProxy': myProxy,
+            # 'noProxy':d ''
+        })
+        print encode_wrap("使用代理:"), myProxy
         driver = webdriver.Firefox(proxy=proxy)
     else:
         driver = webdriver.Firefox()
 
     #driver.set_page_load_timeout(30)
     driver.get(url)
-    print encode_wrap("使用代理:"), myProxy
 
     return driver
 
 # 获取IP代理地址(随机)
 def get_proxies():
 
-    file_name = '../Data/Temp/ip_data_tmp_{}'.format(GetNowDate())
+    file_name = './Data/Temp/ip_data_tmp_{}'.format(GetNowDate())
     try:
         mydb = open(file_name, 'r')
         df_ip = pickle.load(mydb)

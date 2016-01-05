@@ -1,5 +1,7 @@
 # -*- coding:utf8 -*-
 
+# -*- coding:utf8 -*-
+
 import ConfigParser
 import requests
 import pickle
@@ -13,12 +15,13 @@ from bs4 import BeautifulSoup as bs
 
 from util.webHelper import get_web_driver, get_requests
 from util.codeConvert import regularization_time, encode_wrap
-from db_config import mysql_table_weibo_article, engine
+from db_config import mysql_table_licaishi_viewpoint, engine
 
-class Weibo:
+class Licaishi:
 
     def __init__(self):
-        self.url = 'http://weibo.cn/{user_id}'
+        self.site = 'http://licaishi.sina.com.cn'
+        self.url = self.site + '/planner/{user_id}/4?page={pid}'
         self.max_page_count = 5
 
         self.dir_temp = './Data/Temp/'
@@ -30,7 +33,7 @@ class Weibo:
         driver = get_web_driver(url_login, has_proxy=False)
         #driver.save_screenshot('../Data/weibo.png')
         driver.find_element_by_xpath('//input[@type="text"]').send_keys('cbb6150')
-        driver.find_element_by_xpath('//input[@type="password"]').send_keys('12356789')
+        driver.find_element_by_xpath('//input[@type="password"]').send_keys('xx.785906')
 
         driver.find_element_by_xpath('//input[@type="submit"]').click()
 
@@ -45,53 +48,38 @@ class Weibo:
         # for key in dict_cookie.keys():
         #     data_cookie += "{}={};".format(key, dict_cookie[key])
 
-        # f = open(self.dir_temp + 'cookie','w')
-        # pickle.dump(cookie, f)
+        f = open(self.dir_temp + 'cookie','w')
+        pickle.dump(cookie, f)
 
         return driver
 
         #driver.quit()
         #return data_cookie
 
-    def get_login_request(self):
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/31.0.1650.57 Safari/537.36'}
-        data={'mobile':'15910361722', 'password_9075':'12356789', 'remember':'on','backURL':'http://www.weibo.cn','backTitle':'手机新浪网','vk':'9075_fcd6_2358975340'}
-        url = 'http://login.weibo.cn/login/'
-        r = requests.post(url, data = data, headers=headers)
 
+    def get_licaishi_viewpoint_list(self, user_id):
+        """
+        理财师观点
+        :param user_id:
+        :return:
+        """
 
-    def get_weibo_list(self, user_id):
+        url = self.url.format(user_id=user_id, pid=1)
+        r = get_requests(url, has_proxy=False)
+        #print r.text
 
-        # try:
-        #     f = open(self.dir_temp + 'cookie','r')
-        #     data_cookie = pickle.load(f)
-        # except Exception,e:
-        #     self.get_new_cookie()
-        #     f = open(self.dir_temp + 'cookie','r')
-        #     data_cookie = pickle.load(f)
-        #
-        # cookdic = dict(Cookie=data_cookie)
-        #
-        # url = self.url.format(user_id=user_id)
-        # r = get_requests(url, has_proxy=True, cookie=cookdic)
-
-        driver = self.get_new_driver()
-
-        url = self.url.format(user_id=user_id)
-        driver.get(url)
-
-        soup = bs(driver.page_source, 'lxml')
+        soup = bs(r.text, 'lxml')
 
         # 获取关注的总页码
         page_count = self._get_page_count(soup)
 
         # 获取数据库中的最新发表文章时间
-        publish_time_lastest = self._get_lastest_publish_time(mysql_table_weibo_article, user_id)
+        publish_time_lastest = self._get_lastest_publish_time(mysql_table_licaishi_viewpoint, user_id)
 
         current_page = 1
         while(current_page < min((page_count+1), self.max_page_count+1)):
             print "Page:%d / %d" % (current_page, page_count)
-            article_list_one_page = self._get_weibo_user_list_in_one_page(soup, user_id)
+            article_list_one_page = self._get_licaishi_viewpoint_list_in_one_page(soup, user_id)
 
             # 存入mysql
             [archive.to_mysql() for archive in article_list_one_page] #不需判断数据库是否存在,若存在则抛出异常,不插入
@@ -110,18 +98,12 @@ class Weibo:
             print 'Page:{}   Wait time:{}'.format(current_page, wait_time)
 
             # 点击下一页
-            driver.find_element_by_link_text('下页').click()
+            url = self.url.format(user_id=user_id, pid=current_page)
+            r = get_requests(url, has_proxy=False)
+            soup = bs(r.text, 'lxml')
 
-            clickStatus = self._click_next_page(driver)
-            if clickStatus:
-                soup = bs(driver.page_source, 'lxml')
-
-            else:
-                print encode_wrap('无下一页{0}, 退出...'.format(current_page))
-                break
 
         #return article_list
-        driver.quit()
 
     def get_weibo_by_api(self):
         pass
@@ -136,28 +118,28 @@ class Weibo:
 
         try:
 
-            pagerUL = soup.find('div', {'class':'pa'})
-            data_pages = pagerUL.find('input', {'name':'mp', 'type':'hidden'})
+            pagerUL = soup.find('div', {'class':'s_widget w_pages'})
+            data_pages = pagerUL.find('a', {'class':'w_pages_next'})
             page_count = 0
             if data_pages:
-                page_count = int(data_pages['value'])
+                page_count = int(data_pages['data-page'])
         except Exception,e:
             # 只有一页
             page_count = 1
         return page_count
 
-    # 获取一页中的粉丝/关注列表
-    def _get_weibo_user_list_in_one_page(self, soup, user_id):
+    # 获取一页中的观点列表
+    def _get_licaishi_viewpoint_list_in_one_page(self, soup, user_id):
 
         archiveList = []
 
         try:
 
             name = soup.find('title').get_text()
-            name = name.replace('的微博','').strip()
+            name = name.replace('的个人主页_新浪理财师','').strip()
 
-            #statusAll = soup.find('div', {'class':'c'})
-            statusList = soup.findAll('div', {'class':'c'})
+            statusAll = soup.find('div', {'class':'s_left'})
+            statusList = statusAll.findAll('div', {'class':'s_widget w_vp'})
             for status in statusList:
 
                 try:
@@ -166,45 +148,29 @@ class Weibo:
                     archive.user_id = user_id
                     archive.user_name = name
 
-                    archive.detail = status.find('span', {'class':'ctt'}).get_text()
+                    h2_title = status.find('h2', {'class':'w_vp_h2'})
+                    if h2_title:
+                        archive.title = h2_title.get_text().strip()
+                        a_href = h2_title.find('a')
+                        if a_href:
+                            archive.href = self.site + a_href['href']
 
-                    # 发布时间, 设备
-                    timeAndDevice = status.find('span', {'class':'ct'}).get_text()
-                    timeAndDevice = timeAndDevice.split('来自')
-                    if len(timeAndDevice) == 2:
-                        archive.publish_time = regularization_time(timeAndDevice[0].strip())
-                        archive.device = timeAndDevice[1].strip()
+                    p_detail = status.find('p', {'class':'w_vp_p'})
+                    if p_detail:
+                        archive.detail = p_detail.get_text().strip()
 
-                    infos = status.find_all('div')
-                    if len(infos) >= 2:
-                        info = infos[-1].get_text()
-                        m = re.search(u'赞\[(\d+)\]', info)
-                        if m:
-                            archive.donate_count = m.group(1)
+                    div_time = status.find('span', {'class':'w_vp_de'})
+                    if div_time:
+                        archive.publish_time = regularization_time(div_time.get_text().strip())
 
-                        m = re.search(u'转发\[(\d+)\]', info)
-                        if m:
-                            archive.repost_count = m.group(1)
+                    a_device = status.find('a', {'class':'w_vp_fra'})
+                    if a_device:
+                        archive.device = a_device.get_text().strip()
 
-                        m = re.search(u'评论\[(\d+)\]', info)
-                        if m:
-                            archive.comment_count = m.group(1)
-
-                        # 是否为转发
-                        if '转发理由:' in info:
-                            m = re.search(u'转发理由:(.*)赞', info)
-                            if m:
-                                archive.is_repost = True
-                                archive.repost_reason = m.group(1)
-
-                    try:
-                        # 置顶
-                        spanKt = status.find('span', {'class':'kt'})
-                        if spanKt and '置顶' in spanKt.get_text():
-                            archive.is_top = True
-
-                    except:
-                        print 'arctive is no top'
+                    div_watch_count = status.find('div', {'class':'w_vp_ort'})
+                    if div_watch_count:
+                        watch_count = div_watch_count.get_text().strip().replace('人阅读','')
+                        archive.watch_count = int(watch_count)
 
                     archiveList.append(archive)
 
@@ -259,54 +225,57 @@ class Article:
     def __init__(self):
         self.user_id = ''
         self.user_name = ''
-        # self.title = ''
+        self.title = ''
         self.detail = ''
         self.publish_time = ''
         self.device = ''
-        # self.href = ''
+        self.href = ''
+        self.watch_count = 0   #阅读量
         self.repost_count = 0  # 转发数
         self.donate_count = 0  # 赞助数
         self.comment_count = 0 # 评论数
-        self.is_top = False       # 是否置顶
-        self.is_repost = False    # 是否转发
-        self.repost_reason = ''    # 转发理由
+        # self.is_top = False       # 是否置顶
+        # self.is_repost = False    # 是否转发
+        # self.repost_reason = ''    # 转发理由
 
     def to_mysql(self):
 
         try:
 
             df = DataFrame({'user_id':[self.user_id],
-                            #'title':[self.title],
                             'user_name':[self.user_name],
+                            'title':[self.title],
                             'detail': [self.detail],
                             'publish_time':[self.publish_time],
-                            'device':[self.device],
-                            #'href':[self.href],
+                            'href':[self.href],
+                            'watch_count':[self.watch_count],
                             'repost_count':[self.repost_count],
                             'donate_count':[self.donate_count],
                             'comment_count':[self.comment_count],
-                            'is_top':[self.is_top],
-                            'is_repost':[self.is_repost],
-                            'repost_reason':[self.repost_reason]
+                            #'is_top':[self.is_top],
+                            #'is_repost':[self.is_repost],
+                            #'repost_reason':[self.repost_reason
+                            'device':[self.device],# ]
 
                             },
-                           columns=['user_id', 'user_name', 'detail',
-                                    'publish_time', 'repost_count', 'donate_count',
-                                    'comment_count', 'repost_reason', 'is_repost', 'is_top', 'device'])
+                           columns=['user_id', 'user_name', 'title', 'detail',
+                                    'publish_time', 'href','watch_count',
+                                    'repost_count', 'donate_count',
+                                    'comment_count', 'device'])
             print df
 
             try:
-                sql_del = "delete from {table} where user_id='{user_id}' and detail='{detail}' and publish_time='{publish_time}'".format(
-                        table = mysql_table_weibo_article,
+                sql_del = "delete from {table} where user_id='{user_id}' and title='{title}' and publish_time='{publish_time}'".format(
+                        table = mysql_table_licaishi_viewpoint,
                         user_id = self.user_id,
-                        detail = self.detail,
+                        title = self.title,
                         publish_time = self.publish_time
                         )
                 engine.execute(sql_del)
             except Exception,e:
-                print 'delete error!', str(e)
+                print 'delete error! ',  str(e)
 
-            df.to_sql(mysql_table_weibo_article, engine, if_exists='append', index=False)
+            df.to_sql(mysql_table_licaishi_viewpoint, engine, if_exists='append', index=False)
             return True
 
         except Exception,e:
@@ -314,6 +283,6 @@ class Article:
             return False
 
 if __name__ == "__main__":
-    weibo = Weibo()
+    licaishi = Licaishi()
     #weibo.get_cookie()
-    weibo.get_weibo_list('2144596567')
+    licaishi.get_licaishi_viewpoint_list('2357529875')
