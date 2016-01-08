@@ -1,5 +1,6 @@
 # -*- coding:utf8 -*-
 
+import os
 import ConfigParser
 import requests
 import pickle
@@ -10,8 +11,9 @@ import random
 import pandas as pd
 from pandas import DataFrame
 from bs4 import BeautifulSoup as bs
+from selenium import webdriver
 
-from util.webHelper import get_web_driver, get_requests
+from util.webHelper import get_web_driver, get_requests, get_session
 from util.codeConvert import regularization_time, encode_wrap
 from db_config import mysql_table_weibo_article, engine
 
@@ -21,7 +23,64 @@ class Weibo:
         self.url = 'http://weibo.cn/{user_id}'
         self.max_page_count = 5
 
-        self.dir_temp = './Data/Temp/'
+        self.dir_temp = '../Data/Cookie/'
+
+    def get_cookie(self):
+        """
+        获取微博cookie
+        """
+
+        def get_cookie_from_network():
+
+            url_login = 'http://login.weibo.cn/login/'
+            driver = get_web_driver(url_login, has_proxy=False)
+            #driver.save_screenshot('../Data/weibo.png')
+            driver.find_element_by_xpath('//input[@type="text"]').send_keys('cbb6150')
+            driver.find_element_by_xpath('//input[@type="password"]').send_keys('12356789')
+
+            driver.find_element_by_xpath('//input[@type="submit"]').click()
+
+            # 获得 cookie信息
+            cookie_list = driver.get_cookies()
+            print cookie_list
+
+            cookie_dict = {}
+            for cookie in cookie_list:
+                #写入文件
+                f = open(self.dir_temp +cookie['name']+'.weibo','w')
+                pickle.dump(cookie, f)
+                f.close()
+
+                if cookie.has_key('name') and cookie.has_key('value'):
+                    cookie_dict[cookie['name']] = cookie['value']
+
+            return cookie_dict
+
+        def get_cookie_from_cache():
+
+            cookie_dict = {}
+            for parent, dirnames, filenames in os.walk(self.dir_temp):
+                for filename in filenames:
+                    if filename.endswith('.weibo'):
+                        print filename
+                        with open(self.dir_temp + filename, 'rb') as f:
+                            d = pickle.load(f)
+
+                            if d.has_key('name') and d.has_key('value') and d.has_key('expiry'):
+                                expiry_date = int(d['expiry'])
+                                if expiry_date > (int)(time.time()):
+                                    cookie_dict[d['name']] = d['value']
+                                else:
+                                    return {}
+
+            return cookie_dict
+
+        cookie_dict = get_cookie_from_cache()
+        if not cookie_dict:
+            cookie_dict = get_cookie_from_network()
+
+        print cookie_dict
+        return cookie_dict
 
 
 
@@ -58,7 +117,20 @@ class Weibo:
         data={'mobile':'15910361722', 'password_9075':'12356789', 'remember':'on','backURL':'http://www.weibo.cn','backTitle':'手机新浪网','vk':'9075_fcd6_2358975340'}
         url = 'http://login.weibo.cn/login/'
         r = requests.post(url, data = data, headers=headers)
+        cookies = r.cookies
+        print cookies
+        #print('; '.join(['='.join(item) for item in cookies.items()]))
+        print requests.utils.dict_from_cookiejar(cookies)
+        f = open(self.dir_temp + 'cookie','w')
+        pickle.dump(requests.utils.dict_from_cookiejar(cookies), f)
+        f.close()
 
+        f = open(self.dir_temp + 'cookie','r')
+        data_cookie = pickle.load(f)
+        cookdic = dict(Cookie=data_cookie)
+        url = self.url.format(user_id='2144596567')
+        r1 = get_requests(url, has_proxy=True, cookie=cookies)
+        print r1.text
 
     def get_weibo_list(self, user_id):
 
@@ -71,16 +143,18 @@ class Weibo:
         #     data_cookie = pickle.load(f)
         #
         # cookdic = dict(Cookie=data_cookie)
-        #
-        # url = self.url.format(user_id=user_id)
-        # r = get_requests(url, has_proxy=True, cookie=cookdic)
-
-        driver = self.get_new_driver()
+        cookdic = self.get_cookie()
 
         url = self.url.format(user_id=user_id)
-        driver.get(url)
+        r = get_requests(url, has_proxy=True, cookie=cookdic)
+        #r, s = get_session(url, has_proxy=False, cookie=cookdic)
 
-        soup = bs(driver.page_source, 'lxml')
+        # driver = self.get_new_driver()
+        #
+        # url = self.url.format(user_id=user_id)
+        # driver.get(url)
+
+        soup = bs(r.text, 'lxml')
 
         # 获取关注的总页码
         page_count = self._get_page_count(soup)
@@ -106,22 +180,17 @@ class Weibo:
 
             current_page += 1
             wait_time = self._get_wait_time()
-            time.sleep(wait_time)
+            #time.sleep(wait_time)
             print 'Page:{}   Wait time:{}'.format(current_page, wait_time)
 
             # 点击下一页
-            driver.find_element_by_link_text('下页').click()
-
-            clickStatus = self._click_next_page(driver)
-            if clickStatus:
-                soup = bs(driver.page_source, 'lxml')
-
-            else:
-                print encode_wrap('无下一页{0}, 退出...'.format(current_page))
-                break
+            url_next = '{0}?page={1}'.format(url, current_page)
+            #r = s.get(url_next)
+            r = get_requests(url_next, has_proxy=True, cookie=cookdic)
+            soup = bs(r.text, 'lxml')
 
         #return article_list
-        driver.quit()
+
 
     def get_weibo_by_api(self):
         pass
@@ -316,4 +385,6 @@ class Article:
 if __name__ == "__main__":
     weibo = Weibo()
     #weibo.get_cookie()
-    weibo.get_weibo_list('2144596567')
+    weibo.get_weibo_list('5578381471')
+    #weibo.get_login_request()
+    #weibo.get_cookie()
