@@ -54,13 +54,22 @@ def run_licaishi():
     [licaishi.get_licaishi_viewpoint_list(user_id) for user_id in licaishi_user_list]
 
 
-def run_xueqiu_big_v():
+#### For XueQiu
 
-    init_id = cf.get('start', 'init_id').strip()
+def run_xueqiu_big_v():
+    """
+    获取雪球大V
+    """
 
     xueqiu = XueQiu()
     xueqiu.run_get_big_v()
-    #xueqiu.get_user_activity_info(init_id)
+
+def run_xueqiu_big_v_article():
+    """
+    获取大V文章列表
+    """
+    xueqiu = XueQiu()
+    xueqiu.get_publish_articles_by_id()
 
 
 if __name__ == "__main__":

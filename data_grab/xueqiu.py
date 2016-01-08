@@ -444,10 +444,10 @@ class XueQiu:
         siz = driver.get_window_size()
         driver.set_window_size(siz['width'], siz['height']*2)
 
-        # 模拟点击“主贴”,切换到"原发布"
-        driver.find_element_by_xpath('//a[@href="#status_content"]').click()
-        time.sleep(1)
-        driver.find_element_by_xpath('//a[@href="#status_content" and @data-text="原发布"]').click()
+        # # 模拟点击“主贴”,切换到"原发布"
+        # driver.find_element_by_xpath('//a[@href="#status_content"]').click()
+        # time.sleep(1)
+        # driver.find_element_by_xpath('//a[@href="#status_content" and @data-text="原发布"]').click()
 
         # 获取原发布的总页码
         soup = BeautifulSoup(driver.page_source, 'html5lib')
