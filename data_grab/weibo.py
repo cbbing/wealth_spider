@@ -35,7 +35,7 @@ class Weibo:
             url_login = 'http://login.weibo.cn/login/'
             driver = get_web_driver(url_login, has_proxy=False)
             #driver.save_screenshot('../Data/weibo.png')
-            driver.find_element_by_xpath('//input[@type="text"]').send_keys('cbb6150')
+            driver.find_element_by_xpath('//input[@type="text"]').send_keys('18410182275')
             driver.find_element_by_xpath('//input[@type="password"]').send_keys('12356789')
 
             driver.find_element_by_xpath('//input[@type="submit"]').click()
@@ -63,7 +63,7 @@ class Weibo:
                 for filename in filenames:
                     if filename.endswith('.weibo'):
                         print filename
-                        with open(self.dir_temp + filename, 'rb') as f:
+                        with open(self.dir_temp + filename, 'r') as f:
                             d = pickle.load(f)
 
                             if d.has_key('name') and d.has_key('value') and d.has_key('expiry'):

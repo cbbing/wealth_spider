@@ -81,5 +81,9 @@ if __name__ == "__main__":
 
     if len(sys.argv) == 1:
         refresh_web_in_real_time()
-    elif len(sys.argv) == 2:
+    elif len(sys.argv) == 2 and sys.argv[1] == 'xueqiu':
         run_xueqiu_big_v()
+    elif len(sys.argv) == 2 and sys.argv[1] == 'weibo':
+        run_weibo()
+    elif len(sys.argv) == 2 and sys.argv[1] == 'licaishi':
+        run_licaishi()
