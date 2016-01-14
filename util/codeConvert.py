@@ -25,7 +25,7 @@ def GetDate(timefrom1970):
 def GetTime(timefrom1970):
     return time.strftime("%Y-%m-%d %H:%M:%S",time.localtime(timefrom1970))
 
-def GetTime(timefrom1970):
+def GetTime2(timefrom1970):
     return time.strftime("%Y-%m-%d %H:%M",time.localtime(timefrom1970))
 
 def GetNowTime():
