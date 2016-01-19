@@ -954,10 +954,11 @@ if __name__ == "__main__":
     xueqiu = XueQiu()
     #xueqiu.get_web_driver('http://www.baidu.com')
     #xueqiu.run_get_big_v()
-    xueqiu.get_user_activity_info(init_id)
+    #xueqiu.get_user_activity_info(init_id)
 
     #xueqiu.get_unfinished_big_v()
-    #xueqiu.get_publish_articles()
+    xueqiu.get_publish_articles()
+    exit(0)
     #xueqiu.calcute_big_v_rank()
     #exit(0)
 

@@ -12,6 +12,7 @@ import json
 from bs4 import BeautifulSoup as bs
 from random import random
 from multiprocessing.dummy import Pool as ThreadPool
+from db_config import mysql_table_sina_finance
 
 from util.webHelper import get_requests
 
@@ -67,7 +68,7 @@ def get_latest_news(date='2015-01-18', show_content=True):
 
 
             #多线程
-            pool = ThreadPool(processes=10)
+            pool = ThreadPool(processes=20)
             pool.map(_latest_content_for_multi, data)
             pool.close()
             pool.join()
@@ -78,7 +79,7 @@ def get_latest_news(date='2015-01-18', show_content=True):
                 break
 
         df = pd.DataFrame(data_all, columns=nv.LATEST_COLS_C)
-        df.to_sql('mysql_table_sina_finance', engine, if_exists='append', index=False)
+        df.to_sql(mysql_table_sina_finance, engine, if_exists='append', index=False)
         return df
     except Exception as er:
         print(str(er))
@@ -138,15 +139,17 @@ def _latest_content_by_beautifulsoup(url, has_proxy=False):
     try:
         r = get_requests(url, has_proxy=has_proxy)
         r.encoding = 'gbk'
-        soup = bs(r.text, 'lxml')
+        soup = bs(r.text, 'html5lib')
         print soup.encoding
 
         body = soup.find('div', {'id':'artibody'})
         sarr = []
-        if body:
-            p_all = body.find_all('p')
-            for p in p_all:
-                sarr.append(p.get_text())
+        if not body:
+            return ''
+
+        p_all = body.find_all('p')
+        for p in p_all:
+            sarr.append(p.get_text())
         sarr = '\n'.join(sarr)
         print sarr
         return sarr
@@ -172,6 +175,7 @@ def run():
 
 
 if __name__ == "__main__":
+    #_latest_content_by_beautifulsoup('http://roll.news.sina.com.cn/interface/rollnews_ch_out_interface.php?col=43&spec=&type=&ch=03&date=2015-01-01&k=&&offset_page=0&offset_num=0&num=100&asc=&page=3&r=0.4891643722918062')
     run()
     #df = get_latest_news(date='2016-01-01')
     #print df
