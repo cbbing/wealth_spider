@@ -1,7 +1,13 @@
 #coding:utf-8
 import re
 
-def remove_js_css (content):
+"""
+    http://www.cnblogs.com/shouce/p/5126152.html
+    代码 从最后一个函数开始调用
+    本方法是基于文本密度的方法抓取网页正文
+"""
+
+def _remove_js_css (content):
     """ remove the the javascript and the stylesheet and the comment content (<script>....</script> and <style>....</style> <!-- xxx -->) """
     r = re.compile(r'''<script.*?</script>''',re.I|re.M|re.S)
     s = r.sub ('',content)
@@ -15,7 +21,7 @@ def remove_js_css (content):
     s = r.sub('',s)
     return s
 
-def remove_empty_line (content):
+def _remove_empty_line (content):
     """remove multi space """
     r = re.compile(r'''^\s+$''', re.M|re.S)
     s = r.sub ('', content)
@@ -23,28 +29,28 @@ def remove_empty_line (content):
     s = r.sub('\n',s)
     return s
 
-def remove_any_tag (s):
+def _remove_any_tag (s):
     s = re.sub(r'''<[^>]+>''','',s)
     return s.strip()
 
-def remove_any_tag_but_a (s):
+def _remove_any_tag_but_a (s):
     text = re.findall (r'''<a[^r][^>]*>(.*?)</a>''',s,re.I|re.S|re.S)
-    text_b = remove_any_tag (s)
+    text_b = _remove_any_tag (s)
     return len(''.join(text)),len(text_b)
 
-def remove_image (s,n=50):
+def _remove_image (s,n=50):
     image = 'a' * n
     r = re.compile (r'''<img.*?>''',re.I|re.M|re.S)
     s = r.sub(image,s)
     return s
 
-def remove_video (s,n=1000):
+def _remove_video (s,n=1000):
     video = 'a' * n
     r = re.compile (r'''<embed.*?>''',re.I|re.M|re.S)
     s = r.sub(video,s)
     return s
 
-def sum_max (values):
+def _sum_max (values):
     cur_max = values[0]
     glo_max = -999999
     left,right = 0,0
@@ -63,22 +69,23 @@ def sum_max (values):
             break
     return left,right+1
 
-def method_1 (content, k=1):
+def _method_1 (content, k=1):
     if not content:
         return None,None,None,None
     tmp = content.split('\n')
     group_value = []
     for i in range(0,len(tmp),k):
         group = '\n'.join(tmp[i:i+k])
-        group = remove_image (group)
-        group = remove_video (group)
-        text_a,text_b= remove_any_tag_but_a (group)
+        group = _remove_image (group)
+        group = _remove_video (group)
+        text_a,text_b= _remove_any_tag_but_a (group)
         temp = (text_b - text_a) - 8
         group_value.append (temp)
-    left,right = sum_max (group_value)
+    left,right = _sum_max (group_value)
     return left,right, len('\n'.join(tmp[:left])), len ('\n'.join(tmp[:right]))
 
+
 def extract (content):
-    content = remove_empty_line(remove_js_css(content))
-    left,right,x,y = method_1 (content)
+    content = _remove_empty_line(_remove_js_css(content))
+    left,right,x,y = _method_1 (content)
     return '\n'.join(content.split('\n')[left:right])

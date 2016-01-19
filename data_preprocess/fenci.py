@@ -16,16 +16,28 @@ def fenci(data):
     seg_list = jieba.cut(data)
 
     # 基于TF-IDF算法的关键词抽取
-    tags = jieba.analyse.extract_tags(data, topK=20)
+    tags = jieba.analyse.extract_tags(data, topK=50)
     print ','.join(tags)
 
     # 基于TextRank算法的关键词抽取
-    tags2 = jieba.analyse.textrank(data, topK=20)
+    tags2 = jieba.analyse.textrank(data, topK=50)
     print ','.join(tags2)
 
 
     fdist = FreqDist([seg for seg in seg_list])
     fdist.plot(50)
+
+def test_sina_finance():
+    import pandas as pd
+    from db_config import engine, mysql_table_sina_finance
+    classifies = ['美股', '国内财经', '证券', '国际财经', '生活', '期货', '外汇', '港股', '产经', '基金']
+    sql = "select title, content from {table} where classify='{classify}'".format(table=mysql_table_sina_finance, classify=classifies[1])
+    df = pd.read_sql(sql, engine)
+    print df
+    for ix, row in df.iterrows():
+        content = row['title'] + " " + row['content']
+        seg_list = jieba.cut(content)
+
 
 if __name__ == "__main__":
     print 'begin'
@@ -36,6 +48,7 @@ if __name__ == "__main__":
     #     )
     # words = jieba.cut(test_sent)
     # print('/'.join(words))
+    test_sina_finance()
 
     f = open('../Data/weixin.md')
     fenci(f.read())
