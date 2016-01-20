@@ -6,7 +6,16 @@ import re
 import jieba
 jieba.load_userdict('../Data/userdict.txt')
 import jieba.analyse
+
+import pickle
 from nltk import FreqDist
+from tqdm import tqdm
+from multiprocessing.dummy import Pool as ThreadPool
+
+from util.helper import fn_timer
+
+
+
 
 def fenci(data):
 
@@ -27,16 +36,52 @@ def fenci(data):
     fdist = FreqDist([seg for seg in seg_list])
     fdist.plot(50)
 
+@fn_timer
 def test_sina_finance():
-    import pandas as pd
-    from db_config import engine, mysql_table_sina_finance
-    classifies = ['美股', '国内财经', '证券', '国际财经', '生活', '期货', '外汇', '港股', '产经', '基金']
-    sql = "select title, content from {table} where classify='{classify}'".format(table=mysql_table_sina_finance, classify=classifies[1])
-    df = pd.read_sql(sql, engine)
-    print df
-    for ix, row in df.iterrows():
+
+    @fn_timer
+    def get_dataframe():
+        import pandas as pd
+        from db_config import engine, mysql_table_sina_finance
+        classifies = ['美股', '国内财经', '证券', '国际财经', '生活', '期货', '外汇', '港股', '产经', '基金']
+        sql = "select title, content from {table} where classify='{classify}'".format(table=mysql_table_sina_finance, classify=classifies[1])
+        df = pd.read_sql(sql, engine)
+        return df
+
+    df = get_dataframe()
+
+    indexs = range(0, len(df))
+    len_df = len(df)
+    print 'items:{}'.format(len(indexs))
+
+    keys_list = []
+
+    # for ix, row in tqdm(df.iterrows()):
+    #     content = row['title'] + " " + row['content']
+    #     seg_list = jieba.cut(content)
+    #     keys_each = [seg for seg in seg_list]
+    #     keys_list.extend(keys_each)
+
+
+    def _cut_each(ix):
+        row = df.ix[ix]
         content = row['title'] + " " + row['content']
         seg_list = jieba.cut(content)
+        keys_each = [seg for seg in seg_list]
+        keys_list.extend(keys_each)
+        #print 'keys_list length:{}'.format(len(keys_list))
+        print 'index:{}/{}'.format(ix, len_df)
+
+
+    pool = ThreadPool(processes=20)
+    pool.map(_cut_each, indexs)
+    pool.close()
+    pool.join()
+
+    print len(keys_list)
+    f = file('keys_list.pkl', 'wb')
+    pickle.dump(keys_list, f)
+    f.close()
 
 
 if __name__ == "__main__":
@@ -51,4 +96,4 @@ if __name__ == "__main__":
     test_sina_finance()
 
     f = open('../Data/weixin.md')
-    fenci(f.read())
+    #fenci(f.read())

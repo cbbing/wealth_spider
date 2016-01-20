@@ -13,8 +13,8 @@ def fn_timer(function):
         t0 = time.time()
         result = function(*args, **kwargs)
         t1 = time.time()
-        print ("Total time running %s: %s seconds" %
-               (function.func_name, str(t1-t0))
+        print ("Total time running %s: %.2f seconds" %
+               (function.func_name, t1-t0)
                )
         return result
     return function_timer
