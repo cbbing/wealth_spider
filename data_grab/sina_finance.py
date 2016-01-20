@@ -175,8 +175,7 @@ def run():
 
 
 if __name__ == "__main__":
-    url = 'http://video.sina.com.cn/p/finance/china/20151124/154665135947.html'
-    _latest_content_by_beautifulsoup(url)
-    #run()
+    #_latest_content_by_beautifulsoup('http://roll.news.sina.com.cn/interface/rollnews_ch_out_interface.php?col=43&spec=&type=&ch=03&date=2015-01-01&k=&&offset_page=0&offset_num=0&num=100&asc=&page=3&r=0.4891643722918062')
+    run()
     #df = get_latest_news(date='2016-01-01')
     #print df
