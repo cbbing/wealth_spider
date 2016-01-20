@@ -64,13 +64,16 @@ def test_sina_finance():
 
 
     def _cut_each(ix):
-        row = df.ix[ix]
-        content = row['title'] + " " + row['content']
-        seg_list = jieba.cut(content)
-        keys_each = [seg for seg in seg_list]
-        keys_list.extend(keys_each)
-        #print 'keys_list length:{}'.format(len(keys_list))
-        print 'index:{}/{}'.format(ix, len_df)
+        try:
+            row = df.ix[ix]
+            content = row['title'] + " " + row['content']
+            seg_list = jieba.cut(content)
+            keys_each = [seg for seg in seg_list]
+            keys_list.extend(keys_each)
+            #print 'keys_list length:{}'.format(len(keys_list))
+            print 'index:{}/{}'.format(ix, len_df)
+        except Exception, e:
+            print 'index:', ix, e
 
 
     pool = ThreadPool(processes=20)
