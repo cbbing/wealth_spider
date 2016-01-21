@@ -56,36 +56,48 @@ def test_sina_finance():
 
     keys_list = []
 
-    # for ix, row in tqdm(df.iterrows()):
-    #     content = row['title'] + " " + row['content']
-    #     seg_list = jieba.cut(content)
-    #     keys_each = [seg for seg in seg_list]
-    #     keys_list.extend(keys_each)
-
-
-    def _cut_each(ix):
+    for ix, row in tqdm(df.iterrows()):
         try:
-            row = df.ix[ix]
             content = row['title'] + " " + row['content']
             seg_list = jieba.cut(content)
             keys_each = [seg for seg in seg_list]
             keys_list.extend(keys_each)
-            #print 'keys_list length:{}'.format(len(keys_list))
-            print 'index:{}/{}'.format(ix, len_df)
-        except Exception, e:
-            print 'index:', ix, e
+        except Exception,e:
+            print e
 
 
-    pool = ThreadPool(processes=20)
-    pool.map(_cut_each, indexs)
-    pool.close()
-    pool.join()
+    # def _cut_each(ix):
+    #     try:
+    #         row = df.ix[ix]
+    #         content = row['title'] + " " + row['content']
+    #         seg_list = jieba.cut(content)
+    #         keys_each = [seg for seg in seg_list]
+    #         keys_list.extend(keys_each)
+    #         #print 'keys_list length:{}'.format(len(keys_list))
+    #         print 'index:{}/{}'.format(ix, len_df)
+    #     except Exception, e:
+    #         print 'index:', ix, e
+    #
+    #
+    # pool = ThreadPool(processes=20)
+    # pool.map(_cut_each, indexs)
+    # pool.close()
+    # pool.join()
 
     print len(keys_list)
     f = file('keys_list.pkl', 'wb')
     pickle.dump(keys_list, f)
     f.close()
 
+def test_fenci():
+
+    f = open('../Data/stopwords.txt','r')
+    stopwords = f.read().split('\n')
+
+    f = file('keys_list.pkl', 'rb')
+    seg_list = pickle.load(f)
+    fdist = FreqDist([seg for seg in seg_list if seg not in stopwords])
+    fdist.plot(50)
 
 if __name__ == "__main__":
     print 'begin'
@@ -96,7 +108,8 @@ if __name__ == "__main__":
     #     )
     # words = jieba.cut(test_sent)
     # print('/'.join(words))
-    test_sina_finance()
+    #test_sina_finance()
+    test_fenci()
 
     f = open('../Data/weixin.md')
     #fenci(f.read())
