@@ -11,6 +11,8 @@ import pickle
 from nltk import FreqDist
 from tqdm import tqdm
 from multiprocessing.dummy import Pool as ThreadPool
+from tomorrow import threads
+import threading
 
 from util.helper import fn_timer
 
@@ -54,16 +56,38 @@ def test_sina_finance():
     len_df = len(df)
     print 'items:{}'.format(len(indexs))
 
+    f = open('../Data/stopwords.txt','r')
+    stopwords = f.read().split('\n')
+
     keys_list = []
 
-    for ix, row in tqdm(df.iterrows()):
+    #创建锁
+    mutex = threading.Lock()
+
+    @threads(10)
+    def _get_one_article_keys(row):
         try:
             content = row['title'] + " " + row['content']
             seg_list = jieba.cut(content)
-            keys_each = [seg for seg in seg_list]
-            keys_list.extend(keys_each)
+            keys_each = [seg for seg in seg_list if seg not in stopwords]
+
+            if mutex.acquire(): #锁定
+                keys_list.extend(keys_each)
+                mutex.release()
         except Exception,e:
             print e
+
+    [_get_one_article_keys(row) for ix, row in df.iterrows()]
+
+    # for ix, row in tqdm(df.iterrows()):
+    #     try:
+    #         content = row['title'] + " " + row['content']
+    #         seg_list = jieba.cut(content)
+    #         keys_each = [seg for seg in seg_list]
+    #         keys_list.extend(keys_each)
+    #     except Exception,e:
+    #         print e
+
 
 
     # def _cut_each(ix):
@@ -84,9 +108,11 @@ def test_sina_finance():
     # pool.close()
     # pool.join()
 
-    print len(keys_list)
-    f = file('keys_list.pkl', 'wb')
-    pickle.dump(keys_list, f)
+    fdist = FreqDist(keys_list)
+
+    print len(fdist.keys())
+    f = file('fdist.pkl', 'wb')
+    pickle.dump(fdist, f)
     f.close()
 
 def test_fenci():
