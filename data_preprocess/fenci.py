@@ -124,6 +124,8 @@ def test_fenci():
     f = file('fdist.pkl', 'rb')
     fdist = pickle.load(f)
     fdist.plot(50)
+    keys = fdist.keys()[:50]
+    print keys
     f.close()
 
 if __name__ == "__main__":
