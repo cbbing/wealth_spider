@@ -69,7 +69,7 @@ def get_latest_news(date='2015-01-18', show_content=True):
 
             #多线程
             pool = ThreadPool(processes=20)
-            pool.map(_latest_content_for_multi, data)
+            pool.map(latest_content, data)
             pool.close()
             pool.join()
 
@@ -90,15 +90,15 @@ def _latest_content_for_multi(row_data):
     row_data.append(content)
 
 
-def latest_content(url):
-
+def latest_content(row_data):
+    url = row_data[3]
     stop = 3+ 2* random()
-    time.sleep(stop)
-    print "break:{:.3f}s".format(stop)
+    #time.sleep(stop)
+    #print "break:{:.3f}s".format(stop)
     content = _latest_content_xpath(url)
     if not content:
         content = _latest_content_by_beautifulsoup(url)
-    return content
+    row_data.append(content)
 
 def _latest_content_xpath(url):
     '''
@@ -112,6 +112,8 @@ def _latest_content_xpath(url):
         string:返回新闻的文字内容
     '''
     try:
+        if 'video.sina.com.cn' in url:
+            return ''
         html = lxml.html.parse(url)
         res = html.xpath('//div[@id=\"artibody\"]/p')
         if ct.PY3:
@@ -121,9 +123,13 @@ def _latest_content_xpath(url):
         sarr = ''.join(sarr).replace('&#12288;', '')#.replace('\n\n', '\n').
         html_content = lxml.html.fromstring(sarr)
         content = html_content.text_content()
+
+        print content
+        print 'xpath:%s' % url
+
         return content
     except Exception as er:
-        print(str(er))
+        print 'xpath:', (str(er))
 
 def _latest_content_by_beautifulsoup(url, has_proxy=False):
     '''
@@ -137,25 +143,33 @@ def _latest_content_by_beautifulsoup(url, has_proxy=False):
         string:返回新闻的文字内容
     '''
     try:
+        if 'video.sina.com.cn' in url:
+            return ''
+
         r = get_requests(url, has_proxy=has_proxy)
         r.encoding = 'gbk'
         soup = bs(r.text, 'lxml')
-        print soup.encoding
-
         body = soup.find('div', {'id':'artibody'})
         sarr = []
         if not body:
-            return ''
+            soup = bs(r.text, 'html5lib')
+            body = soup.find('div', {'id':'artibody'})
+            if not body:
+                return ''
 
         p_all = body.find_all('p')
         for p in p_all:
             sarr.append(p.get_text())
         sarr = '\n'.join(sarr)
+
         print sarr
+        print 'bs:%s' % url
+
         return sarr
 
     except Exception as er:
-        print(str(er))
+        print 'beautifusoup:', (str(er))
+        return ''
 
 
 def _random(n=16):
@@ -166,7 +180,7 @@ def _random(n=16):
 
 def run():
     #获取近三年的财经资讯
-    df_date = pd.date_range('2015-01-01', '2016-01-18')
+    df_date = pd.date_range('2014-01-01', '2014-12-31')
     for ix in range(len(df_date)):
         _date = str(df_date[ix])[:10]
         df =get_latest_news(_date)
@@ -175,7 +189,8 @@ def run():
 
 
 if __name__ == "__main__":
-    #_latest_content_by_beautifulsoup('http://roll.news.sina.com.cn/interface/rollnews_ch_out_interface.php?col=43&spec=&type=&ch=03&date=2015-01-01&k=&&offset_page=0&offset_num=0&num=100&asc=&page=3&r=0.4891643722918062')
+    #url = 'http://video.sina.com.cn/p/finance/china/20151124/160565135995.html '
+    #_latest_content_by_beautifulsoup(url, True)
     run()
     #df = get_latest_news(date='2016-01-01')
     #print df

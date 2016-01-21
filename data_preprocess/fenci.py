@@ -1,10 +1,13 @@
 #coding=utf8
 
 # 分词
+import sys
+reload(sys)
+sys.setdefaultencoding('utf8')
 
 import re
 import jieba
-jieba.load_userdict('../Data/userdict.txt')
+#jieba.load_userdict('../Data/userdict.txt')
 import jieba.analyse
 
 import pickle
@@ -46,7 +49,8 @@ def test_sina_finance():
         import pandas as pd
         from db_config import engine, mysql_table_sina_finance
         classifies = ['美股', '国内财经', '证券', '国际财经', '生活', '期货', '外汇', '港股', '产经', '基金']
-        sql = "select title, content from {table} where classify='{classify}'".format(table=mysql_table_sina_finance, classify=classifies[1])
+        #sql = "select title, content from {table} where classify='{classify}'".format(table=mysql_table_sina_finance, classify=classifies[1])
+        sql = "select title, content from {table}".format(table=mysql_table_sina_finance)
         df = pd.read_sql(sql, engine)
         return df
 
@@ -117,13 +121,10 @@ def test_sina_finance():
 
 def test_fenci():
 
-    f = open('../Data/stopwords.txt','r')
-    stopwords = f.read().split('\n')
-
-    f = file('keys_list.pkl', 'rb')
-    seg_list = pickle.load(f)
-    fdist = FreqDist([seg for seg in seg_list if seg not in stopwords])
+    f = file('fdist.pkl', 'rb')
+    fdist = pickle.load(f)
     fdist.plot(50)
+    f.close()
 
 if __name__ == "__main__":
     print 'begin'
@@ -137,5 +138,5 @@ if __name__ == "__main__":
     #test_sina_finance()
     test_fenci()
 
-    f = open('../Data/weixin.md')
+    #f = open('../Data/weixin.md')
     #fenci(f.read())

@@ -413,7 +413,7 @@ class XueQiu:
         #sql = 'select distinct user_id from %s where user_id not in (select distinct user_id from %s)' % (big_v_table_mysql, archive_table_mysql)
         #df = pd.read_sql_query(sql, engine)
         #user_ids = df['user_id'].get_values()
-        sql1 = 'select distinct user_id from %s where fans_count > 10000' % (big_v_table_mysql)
+        sql1 = 'select distinct user_id from %s where fans_count > 1000 and fans_count < 10001 ' % (big_v_table_mysql)
         sql2 = 'select distinct user_id from %s' % archive_table_mysql
         df1 = pd.read_sql_query(sql1, engine)
         df2 = pd.read_sql_query(sql2, engine)
