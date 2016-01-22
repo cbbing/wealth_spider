@@ -7,10 +7,10 @@ sys.setdefaultencoding('utf8')
 
 import re
 import jieba
-#jieba.load_userdict('../Data/userdict.txt')
+jieba.load_userdict('../Data/userdict1.txt')
 import jieba.analyse
 
-jieba.enable_parallel(4)
+jieba.enable_parallel(2)
 
 import pickle
 from nltk import FreqDist
@@ -54,7 +54,7 @@ def test_sina_finance():
         import pandas as pd
         from db_config import engine, mysql_table_sina_finance
         #sql = "select title, content from {table} where classify='{classify}' limit 0,10".format(table=mysql_table_sina_finance, classify=classify)
-        sql = "select * from {table}".format(table=mysql_table_sina_finance)
+        sql = "select * from {table} limit 0, 40000".format(table=mysql_table_sina_finance)
         df = pd.read_sql(sql, engine)
         return df
 
@@ -62,15 +62,15 @@ def test_sina_finance():
         try:
             row = df.loc[ix]
             content = row['title'] + " " + row['content']
-            seg_list = jieba.cut(content)
-            keys_each = [seg.strip() for seg in seg_list if (len(seg.strip()) > 0 and seg.strip() not in stopwords)]
+            # seg_list = jieba.cut(content)
+            # keys_each = [seg.strip() for seg in seg_list if (len(seg.strip()) > 0 and seg.strip() not in stopwords)]
 
-            tags2 = jieba.analyse.textrank(content, topK=20)
-            tag_each = [tag.strip() for tag in tags2  if (len(seg.strip()) > 0 and seg.strip() not in stopwords)]
+            tags2 = jieba.analyse.textrank(content, topK=50)
+            tag_each = [tag.strip() for tag in tags2  if (len(tag.strip()) > 0 and tag.strip() not in stopwords)]
             print row['time']
             # df.loc[ix, 'keys'] = ','.join(keys_each)
             # df.loc[ix,'tags'] = ','.join(tag_each)
-            df['keys'][ix] = ','.join(keys_each)
+            #df['keys'][ix] = ','.join(keys_each)
             df['tags'][ix] = ','.join(tag_each)
             #print df.loc[ix, 'keys']
             #return  (keys_each, tag_each)
@@ -87,7 +87,7 @@ def test_sina_finance():
     classifies = ['美股', '国内财经', '证券', '国际财经',  '期货', '外汇', '港股', '产经', '基金']
     df_all = get_dataframe()
     print df_all.head()
-    for i in range(2,len(classifies)):
+    for i in range(0,len(classifies)):
 
         df = df_all[df_all['classify']==classifies[i]]
         df = df[:1000]
@@ -101,7 +101,7 @@ def test_sina_finance():
         df['tags'] = ''
         print df
 
-        pool = ThreadPool(processes=100)
+        pool = ThreadPool(processes=10)
         pool.map(_get_one_article_keys, indexs)
         pool.close()
         pool.join()
@@ -110,29 +110,30 @@ def test_sina_finance():
         tag_list = []
         for ix, row in df.iterrows():
             print row['keys']
-            keys_list.extend(row['keys'].strip().split(','))
+            #keys_list.extend(row['keys'].strip().split(','))
             tag_list.extend(row['tags'].strip().split(','))
 
-        print len(keys_list)
-        fdist = FreqDist(keys_list)
-        print len(fdist.keys())
-        f = file('fdist_{}.pkl'.format(i), 'wb')
-        pickle.dump(fdist, f)
-        f.close()
+        # print len(keys_list)
+        # fdist = FreqDist(keys_list)
+        # print len(fdist.keys())
+        # f = file('fdist_{}.pkl'.format(i), 'wb')
+        # pickle.dump(fdist, f)
+        # f.close()
 
         fdist_tag = FreqDist(tag_list)
         print len(fdist_tag.keys())
         f = file('ftags_{}.pkl'.format(i), 'wb')
-        pickle.dump(fdist, f)
+        pickle.dump(fdist_tag, f)
         f.close()
 
 def test_fenci():
 
-    f = file('ftags.pkl', 'rb')
-    fdist = pickle.load(f)
-    fdist.plot(50)
-    keys = fdist.keys()[:50]
-    print keys
+    for i in range(2, 9):
+        f = file('ftags_{}.pkl'.format(i), 'rb')
+        fdist = pickle.load(f)
+        fdist.plot(50)
+        keys = fdist.keys()[:50]
+        print keys
     f.close()
 
 if __name__ == "__main__":
