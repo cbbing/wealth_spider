@@ -7,10 +7,10 @@ sys.setdefaultencoding('utf8')
 
 import re
 import jieba
-jieba.load_userdict('../Data/userdict1.txt')
+#jieba.load_userdict('../Data/userdict1.txt')
 import jieba.analyse
 
-jieba.enable_parallel(2)
+#jieba.enable_parallel(2)
 
 import pickle
 from nltk import FreqDist
@@ -18,10 +18,14 @@ from tqdm import tqdm
 from multiprocessing.dummy import Pool as ThreadPool
 from tomorrow import threads
 import threading
+import pandas as pd
+from pandas import DataFrame
 
 from util.helper import fn_timer
+import matplotlib.pyplot as plt
 
 
+classifies = [u'美股', u'国内财经', u'证券', u'国际财经',  u'期货', u'外汇', u'港股', u'产经', u'基金']
 
 
 def fenci(data):
@@ -84,7 +88,7 @@ def test_sina_finance():
 
     f = open('../Data/stopwords.txt','r')
     stopwords = f.read().split('\n')
-    classifies = ['美股', '国内财经', '证券', '国际财经',  '期货', '外汇', '港股', '产经', '基金']
+
     df_all = get_dataframe()
     print df_all.head()
     for i in range(0,len(classifies)):
@@ -128,13 +132,35 @@ def test_sina_finance():
 
 def test_fenci():
 
-    for i in range(2, 9):
+    dfs = []
+
+    for i in range(0, 9):
         f = file('ftags_{}.pkl'.format(i), 'rb')
         fdist = pickle.load(f)
-        fdist.plot(50)
-        keys = fdist.keys()[:50]
-        print keys
-    f.close()
+        #fdist.plot(50)
+        df = DataFrame(fdist.items(), columns=['关键词', '计数'])
+        df = df.sort_index(by='计数', ascending=False)
+        df.index = range(len(df))
+
+        df_plt = df[:30]
+        df_plt = df_plt[::-1]
+        #df_plt['关键词'].apply(lambda x : x.encode('utf8'))
+        print df_plt.head()
+        df_plt.plot(kind='barh', x=df_plt['关键词'], title=classifies[i])
+
+        plt.show()
+        plt.savefig('{}.png'.format(classifies[i]), dpi=100)
+
+        dfs.append((classifies[i],df))
+
+        #print df[df[1] > 1]
+        f.close()
+    print 'end'
+
+    with pd.ExcelWriter('keys.xlsx') as writer:
+        for key, df in dfs:
+            print key
+            df.to_excel(writer, sheet_name=key, index=False)
 
 if __name__ == "__main__":
     print 'begin'
@@ -145,8 +171,8 @@ if __name__ == "__main__":
     #     )
     # words = jieba.cut(test_sent)
     # print('/'.join(words))
-    test_sina_finance()
-    #test_fenci()
+    #test_sina_finance()
+    test_fenci()
 
     #f = open('../Data/weixin.md')
     #fenci(f.read())
