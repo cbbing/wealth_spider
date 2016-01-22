@@ -10,6 +10,8 @@ import jieba
 #jieba.load_userdict('../Data/userdict.txt')
 import jieba.analyse
 
+jieba.enable_parallel(4)
+
 import pickle
 from nltk import FreqDist
 from tqdm import tqdm
@@ -88,7 +90,7 @@ def test_sina_finance():
     for i in range(2,len(classifies)):
 
         df = df_all[df_all['classify']==classifies[i]]
-
+        df = df[:1000]
         indexs = range(0, len(df))
         print 'df length:{}'.format(len(indexs))
         df.index = indexs
