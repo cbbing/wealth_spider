@@ -13,9 +13,11 @@ import jieba.analyse
 #jieba.enable_parallel(2)
 
 import pickle
+import time
 from nltk import FreqDist
 from tqdm import tqdm
 from multiprocessing.dummy import Pool as ThreadPool
+import multiprocessing
 from tomorrow import threads
 import threading
 import pandas as pd
@@ -51,31 +53,36 @@ def fenci(data):
 def test_sina_finance():
 
     #创建锁
-    mutex = threading.Lock()
+    #mutex = threading.Lock()
 
     @fn_timer
     def get_dataframe():
         import pandas as pd
         from db_config import engine, mysql_table_sina_finance
         #sql = "select title, content from {table} where classify='{classify}' limit 0,10".format(table=mysql_table_sina_finance, classify=classify)
-        sql = "select * from {table} limit 0, 40000".format(table=mysql_table_sina_finance)
+        sql = "select * from {table} limit 0, 10000".format(table=mysql_table_sina_finance)
         df = pd.read_sql(sql, engine)
         return df
 
-    def _get_one_article_keys(ix):
+    def _get_one_article_keys(content):
         try:
-            row = df.loc[ix]
-            content = row['title'] + " " + row['content']
+            #row = df.loc[ix]
+            #content = row['title'] + " " + row['content']
             # seg_list = jieba.cut(content)
             # keys_each = [seg.strip() for seg in seg_list if (len(seg.strip()) > 0 and seg.strip() not in stopwords)]
+            f = open('../Data/stopwords.txt','r')
+            stopwords = f.read().split('\n')
 
             tags2 = jieba.analyse.textrank(content, topK=50)
             tag_each = [tag.strip() for tag in tags2  if (len(tag.strip()) > 0 and tag.strip() not in stopwords)]
             print row['time']
+            print multiprocessing.current_process()
             # df.loc[ix, 'keys'] = ','.join(keys_each)
             # df.loc[ix,'tags'] = ','.join(tag_each)
             #df['keys'][ix] = ','.join(keys_each)
-            df['tags'][ix] = ','.join(tag_each)
+            #df['tags'][ix] = ','.join(tag_each)
+            return ','.join(tag_each)
+
             #print df.loc[ix, 'keys']
             #return  (keys_each, tag_each)
             #if mutex.acquire(): #锁定
@@ -86,8 +93,7 @@ def test_sina_finance():
             print "_get_one_article_keys():%s" % str(e)
             #return ([],[])
 
-    f = open('../Data/stopwords.txt','r')
-    stopwords = f.read().split('\n')
+
 
     df_all = get_dataframe()
     print df_all.head()
@@ -103,14 +109,32 @@ def test_sina_finance():
 
         df['keys'] = ''
         df['tags'] = ''
-        print df
+        print df.head()
 
-        pool = ThreadPool(processes=10)
-        pool.map(_get_one_article_keys, indexs)
+        # pool = ThreadPool(processes=10)
+        # pool.map(_get_one_article_keys, indexs)
+        # pool.close()
+        # pool.join()
+
+        print multiprocessing.cpu_count()
+        t0 = time.time()
+        #pool = multiprocessing.Pool(processes = 4)
+        pool = ThreadPool(processes = 8)
+        result = []
+        contents = []
+        for ix, row in df.iterrows():
+            content = row['title'] + " " + row['content']
+            contents.append(content)
+            #result.append(pool.apply(get_one_article_keys, (content,)))
+        result = pool.map(get_one_article_keys, contents)
         pool.close()
         pool.join()
+        t1 = time.time()
+        print 'time pass:{:.3f}'.format(t1-t0)
+        for res in result:
+            print res
 
-        keys_list = []
+        #keys_list = []
         tag_list = []
         for ix, row in df.iterrows():
             print row['keys']
@@ -129,6 +153,19 @@ def test_sina_finance():
         f = file('ftags_{}.pkl'.format(i), 'wb')
         pickle.dump(fdist_tag, f)
         f.close()
+
+def get_one_article_keys(content):
+    try:
+        f = open('../Data/stopwords.txt','r')
+        stopwords = f.read().split('\n')
+
+        tags2 = jieba.analyse.textrank(content, topK=50)
+        tag_each = [tag.strip() for tag in tags2  if (len(tag.strip()) > 0 and tag.strip() not in stopwords)]
+        print multiprocessing.current_process()
+        return ','.join(tag_each)
+    except Exception,e:
+        print "_get_one_article_keys():%s" % str(e)
+        return ''
 
 def test_fenci():
 
@@ -171,8 +208,8 @@ if __name__ == "__main__":
     #     )
     # words = jieba.cut(test_sent)
     # print('/'.join(words))
-    #test_sina_finance()
-    test_fenci()
+    test_sina_finance()
+    #test_fenci()
 
     #f = open('../Data/weixin.md')
     #fenci(f.read())
