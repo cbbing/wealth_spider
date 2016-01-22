@@ -44,84 +44,89 @@ def fenci(data):
 @fn_timer
 def test_sina_finance():
 
+    #创建锁
+    mutex = threading.Lock()
+
     @fn_timer
     def get_dataframe():
         import pandas as pd
         from db_config import engine, mysql_table_sina_finance
-        classifies = ['美股', '国内财经', '证券', '国际财经', '生活', '期货', '外汇', '港股', '产经', '基金']
-        #sql = "select title, content from {table} where classify='{classify}'".format(table=mysql_table_sina_finance, classify=classifies[1])
-        sql = "select title, content from {table}".format(table=mysql_table_sina_finance)
+        #sql = "select title, content from {table} where classify='{classify}' limit 0,10".format(table=mysql_table_sina_finance, classify=classify)
+        sql = "select * from {table}".format(table=mysql_table_sina_finance)
         df = pd.read_sql(sql, engine)
         return df
 
-    df = get_dataframe()
+    def _get_one_article_keys(ix):
+        try:
+            row = df.loc[ix]
+            content = row['title'] + " " + row['content']
+            seg_list = jieba.cut(content)
+            keys_each = [seg.strip() for seg in seg_list if (len(seg.strip()) > 0 and seg.strip() not in stopwords)]
 
-    indexs = range(0, len(df))
-    len_df = len(df)
-    print 'items:{}'.format(len(indexs))
+            tags2 = jieba.analyse.textrank(content, topK=20)
+            tag_each = [tag.strip() for tag in tags2  if (len(seg.strip()) > 0 and seg.strip() not in stopwords)]
+            print row['time']
+            # df.loc[ix, 'keys'] = ','.join(keys_each)
+            # df.loc[ix,'tags'] = ','.join(tag_each)
+            df['keys'][ix] = ','.join(keys_each)
+            df['tags'][ix] = ','.join(tag_each)
+            #print df.loc[ix, 'keys']
+            #return  (keys_each, tag_each)
+            #if mutex.acquire(): #锁定
+            #keys_list.extend(keys_each)
+            #tag_list.extend(tag_each)
+            #mutex.release()
+        except Exception,e:
+            print "_get_one_article_keys():%s" % str(e)
+            #return ([],[])
 
     f = open('../Data/stopwords.txt','r')
     stopwords = f.read().split('\n')
+    classifies = ['美股', '国内财经', '证券', '国际财经',  '期货', '外汇', '港股', '产经', '基金']
+    df_all = get_dataframe()
+    print df_all.head()
+    for i in range(2,len(classifies)):
 
-    keys_list = []
+        df = df_all[df_all['classify']==classifies[i]]
 
-    #创建锁
-    mutex = threading.Lock()
+        indexs = range(0, len(df))
+        print 'df length:{}'.format(len(indexs))
+        df.index = indexs
+        if len(df) == 0:
+            continue
 
-    @threads(10)
-    def _get_one_article_keys(row):
-        try:
-            content = row['title'] + " " + row['content']
-            seg_list = jieba.cut(content)
-            keys_each = [seg for seg in seg_list if seg not in stopwords]
+        df['keys'] = ''
+        df['tags'] = ''
+        print df
 
-            if mutex.acquire(): #锁定
-                keys_list.extend(keys_each)
-                mutex.release()
-        except Exception,e:
-            print e
+        pool = ThreadPool(processes=100)
+        pool.map(_get_one_article_keys, indexs)
+        pool.close()
+        pool.join()
 
-    [_get_one_article_keys(row) for ix, row in df.iterrows()]
+        keys_list = []
+        tag_list = []
+        for ix, row in df.iterrows():
+            print row['keys']
+            keys_list.extend(row['keys'].strip().split(','))
+            tag_list.extend(row['tags'].strip().split(','))
 
-    # for ix, row in tqdm(df.iterrows()):
-    #     try:
-    #         content = row['title'] + " " + row['content']
-    #         seg_list = jieba.cut(content)
-    #         keys_each = [seg for seg in seg_list]
-    #         keys_list.extend(keys_each)
-    #     except Exception,e:
-    #         print e
+        print len(keys_list)
+        fdist = FreqDist(keys_list)
+        print len(fdist.keys())
+        f = file('fdist_{}.pkl'.format(i), 'wb')
+        pickle.dump(fdist, f)
+        f.close()
 
-
-
-    # def _cut_each(ix):
-    #     try:
-    #         row = df.ix[ix]
-    #         content = row['title'] + " " + row['content']
-    #         seg_list = jieba.cut(content)
-    #         keys_each = [seg for seg in seg_list]
-    #         keys_list.extend(keys_each)
-    #         #print 'keys_list length:{}'.format(len(keys_list))
-    #         print 'index:{}/{}'.format(ix, len_df)
-    #     except Exception, e:
-    #         print 'index:', ix, e
-    #
-    #
-    # pool = ThreadPool(processes=20)
-    # pool.map(_cut_each, indexs)
-    # pool.close()
-    # pool.join()
-
-    fdist = FreqDist(keys_list)
-
-    print len(fdist.keys())
-    f = file('fdist.pkl', 'wb')
-    pickle.dump(fdist, f)
-    f.close()
+        fdist_tag = FreqDist(tag_list)
+        print len(fdist_tag.keys())
+        f = file('ftags_{}.pkl'.format(i), 'wb')
+        pickle.dump(fdist, f)
+        f.close()
 
 def test_fenci():
 
-    f = file('fdist.pkl', 'rb')
+    f = file('ftags.pkl', 'rb')
     fdist = pickle.load(f)
     fdist.plot(50)
     f.close()
@@ -135,8 +140,8 @@ if __name__ == "__main__":
     #     )
     # words = jieba.cut(test_sent)
     # print('/'.join(words))
-    #test_sina_finance()
-    test_fenci()
+    test_sina_finance()
+    #test_fenci()
 
     #f = open('../Data/weixin.md')
     #fenci(f.read())
