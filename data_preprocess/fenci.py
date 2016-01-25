@@ -136,7 +136,7 @@ def get_one_article_keys(content):
 #文件名: ch.py
 def set_ch():
     from pylab import mpl
-    #mpl.rcParams['font.sans-serif'] = ['FangSong'] # 指定默认字体
+    mpl.rcParams['font.sans-serif'] = ['FangSong'] # 指定默认字体
     mpl.rcParams['axes.unicode_minus'] = False # 解决保存图像是负号'-'显示为方块的问题
 
 set_ch()
@@ -159,8 +159,11 @@ def test_fenci():
         print df_plt.head()
         df_plt.plot(kind='barh', x=df_plt['关键词'], title=classifies[i])
 
-        plt.show()
-        plt.savefig('Data/{}.png'.format(classifies[i]), dpi=100)
+        #plt.show()
+
+        filePath = 'Data/{}.png'.format(classifies[i])
+        str_name_f = filePath.decode("utf8")
+        plt.savefig(str_name_f, dpi=100)
 
         dfs.append((classifies[i],df))
 
