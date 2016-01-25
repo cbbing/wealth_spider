@@ -136,7 +136,7 @@ def get_one_article_keys(content):
 #文件名: ch.py
 def set_ch():
     from pylab import mpl
-    mpl.rcParams['font.sans-serif'] = ['FangSong'] # 指定默认字体
+    mpl.rcParams['font.sans-serif'] = ['SimHei']#['FangSong'] # 指定默认字体
     mpl.rcParams['axes.unicode_minus'] = False # 解决保存图像是负号'-'显示为方块的问题
 
 set_ch()
@@ -171,7 +171,7 @@ def test_fenci():
         f.close()
     print 'end'
 
-    with pd.ExcelWriter('keys.xlsx') as writer:
+    with pd.ExcelWriter('Data/keys.xlsx') as writer:
         for key, df in dfs:
             print key
             df.to_excel(writer, sheet_name=key, index=False)
