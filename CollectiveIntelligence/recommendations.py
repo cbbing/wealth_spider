@@ -205,8 +205,8 @@ def calculate_similar_items(prefs, n=10):
 
     return result
 
-itemsim = calculate_similar_items(critics)
-print itemsim[itemsim.keys()[0]]
+# itemsim = calculate_similar_items(critics)
+# print itemsim[itemsim.keys()[0]]
 
 def get_recommend_items(prefs, itemMatch, user):
     userRatings = prefs[user]
@@ -238,5 +238,26 @@ def get_recommend_items(prefs, itemMatch, user):
     rankings.reverse()
     return rankings
 
-rankings = get_recommend_items(critics, itemsim, 'Toby')
-print rankings
+# rankings = get_recommend_items(critics, itemsim, 'Toby')
+# print rankings
+
+def loadMovieLens(path='../ml-100k/'):
+
+    # 获取影片标题
+    movies = {}
+    for line in open(path + 'u.item'):
+        (id, title) = line.split('|')[0:2]
+        movies[id] = title
+
+    # 加载数据
+    prefs = {}
+    for line in open(path + 'u.data'):
+        (user, movieid, rating, ts) = line.split('\t')
+        prefs.setdefault(user, {})
+        prefs[user][movies[movieid]] = float(rating)
+
+    return prefs
+
+prefs = loadMovieLens()
+#print prefs['87']
+print get_recommendations(prefs, '87')[0:30]
