@@ -26,6 +26,14 @@ from pandas import DataFrame
 from util.helper import fn_timer
 import matplotlib.pyplot as plt
 
+#文件名: ch.py
+def set_ch():
+    from pylab import mpl
+    mpl.rcParams['font.sans-serif'] = ['SimHei']#['FangSong'] # 指定默认字体
+    mpl.rcParams['axes.unicode_minus'] = False # 解决保存图像是负号'-'显示为方块的问题
+
+set_ch()
+
 
 classifies = [u'美股', u'国内财经', u'证券', u'国际财经',  u'期货', u'外汇', u'港股', u'产经', u'基金']
 f = open('../Data/stopwords.txt','r')
@@ -133,13 +141,7 @@ def get_one_article_keys(content):
         return ''
 
 
-#文件名: ch.py
-def set_ch():
-    from pylab import mpl
-    mpl.rcParams['font.sans-serif'] = ['SimHei']#['FangSong'] # 指定默认字体
-    mpl.rcParams['axes.unicode_minus'] = False # 解决保存图像是负号'-'显示为方块的问题
 
-set_ch()
 
 def test_fenci():
 
