@@ -180,7 +180,7 @@ def _random(n=16):
 
 def run():
     #获取近三年的财经资讯
-    df_date = pd.date_range('2014-01-01', '2014-12-31')
+    df_date = pd.date_range('2013-01-01', '2013-12-31')
     for ix in range(len(df_date)):
         _date = str(df_date[ix])[:10]
         df =get_latest_news(_date)
