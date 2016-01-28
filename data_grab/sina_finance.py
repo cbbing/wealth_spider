@@ -21,9 +21,11 @@ try:
 except ImportError:
     from urllib2 import urlopen, Request
 
+import requests
+
 from db_config import engine
 
-def get_latest_news(date='2015-01-18', show_content=True):
+def get_latest_news(col='43', date='2015-01-18', show_content=True):
     """
         获取即时财经新闻
 
@@ -44,10 +46,13 @@ def get_latest_news(date='2015-01-18', show_content=True):
     try:
         data_all = []
         for page in range(1, 100):
-            URL = 'http://roll.news.sina.com.cn/interface/rollnews_ch_out_interface.php?col=43&spec=&type=&ch=03&date={date_}&k=&&offset_page=0&offset_num=0&num={count_}&asc=&page={page_}&r=0.{random_}'
-            url = URL.format(date_ = date, count_=ct.PAGE_NUM[3], page_=page, random_=_random())
+            url = 'http://roll.news.sina.com.cn/interface/rollnews_ch_out_interface.php?col={_col}&spec=&type=&ch=03&date={date_}&k=&&offset_page=0&offset_num=0&num={count_}&asc=&page={page_}&r=0.{random_}'
+            url = url.format(_col=col, date_ = date, count_=ct.PAGE_NUM[3], page_=page, random_=_random())
             print url
             request = Request(url)
+
+            #r = requests.get(url, timeout=30)
+            #data_str = r.text
 
             data_str = urlopen(request, timeout=10).read()
             data_str = data_str.decode('GBK')
@@ -68,15 +73,15 @@ def get_latest_news(date='2015-01-18', show_content=True):
 
 
             #多线程
-            pool = ThreadPool(processes=20)
-            pool.map(latest_content, data)
-            pool.close()
-            pool.join()
-
-            if data:
-                data_all.extend(data)
-            else:
-                break
+            # pool = ThreadPool(processes=20)
+            # pool.map(latest_content, data)
+            # pool.close()
+            # pool.join()
+            #
+            # if data:
+            #     data_all.extend(data)
+            # else:
+            #     break
 
         df = pd.DataFrame(data_all, columns=nv.LATEST_COLS_C)
         df.to_sql(mysql_table_sina_finance, engine, if_exists='append', index=False)
@@ -178,19 +183,29 @@ def _random(n=16):
     end = (10 ** n) - 1
     return str(randint(start, end))
 
-def run():
+def run_finance_news():
     #获取近三年的财经资讯
     df_date = pd.date_range('2014-01-01', '2014-12-31')
     for ix in range(len(df_date)):
         _date = str(df_date[ix])[:10]
-        df =get_latest_news(_date)
+        col = '43'
+        df =get_latest_news(col, _date)
         print df
 
+def run_other_news():
+    #获取近三年的其他资讯
+    df_date = pd.date_range('2015-01-01', '2016-01-27')
+    for ix in range(len(df_date)):
+        _date = str(df_date[ix])[:10]
+        col = '90,91,92,94,95,93,96' # 国内,国际,社会,体育,娱乐,军事,科技
+        df =get_latest_news(col, _date)
+        print df
 
 
 if __name__ == "__main__":
     #url = 'http://video.sina.com.cn/p/finance/china/20151124/160565135995.html '
     #_latest_content_by_beautifulsoup(url, True)
-    run()
+    #run_finance_news()
+    run_other_news()
     #df = get_latest_news(date='2016-01-01')
     #print df
