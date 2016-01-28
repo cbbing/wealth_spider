@@ -15,6 +15,7 @@ from multiprocessing.dummy import Pool as ThreadPool
 from db_config import mysql_table_sina_finance
 
 from util.webHelper import get_requests
+from util.codeConvert import GetNowTime
 
 try:
     from urllib.request import urlopen, Request
@@ -54,7 +55,7 @@ def get_latest_news(col='43', date='2015-01-18', show_content=True):
             #r = requests.get(url, timeout=30)
             #data_str = r.text
 
-            data_str = urlopen(request, timeout=10).read()
+            data_str = urlopen(request, timeout=1).read()
             data_str = data_str.decode('GBK')
             data_str = data_str.split('=')[1][:-1]
             data_str = eval(data_str, type('Dummy', (dict,),
@@ -72,21 +73,23 @@ def get_latest_news(col='43', date='2015-01-18', show_content=True):
                 data.append(arow)
 
 
-            #多线程
-            # pool = ThreadPool(processes=20)
-            # pool.map(latest_content, data)
-            # pool.close()
-            # pool.join()
-            #
-            # if data:
-            #     data_all.extend(data)
-            # else:
-            #     break
+            # 多线程
+            pool = ThreadPool(processes=20)
+            pool.map(latest_content, data)
+            pool.close()
+            pool.join()
+
+            if data:
+                data_all.extend(data)
+            else:
+                break
 
         df = pd.DataFrame(data_all, columns=nv.LATEST_COLS_C)
         df.to_sql(mysql_table_sina_finance, engine, if_exists='append', index=False)
         return df
     except Exception as er:
+        df_er = pd.DataFrame([('sina_news', GetNowTime(), url)], columns=['site','date_occur','url'])
+        df_er.to_sql('unfinish_sina_news_timeout', engine, if_exists='append')
         print(str(er))
 
 
