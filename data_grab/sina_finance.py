@@ -12,7 +12,7 @@ import json
 from bs4 import BeautifulSoup as bs
 from random import random
 from multiprocessing.dummy import Pool as ThreadPool
-from db_config import mysql_table_sina_finance
+from db_config import mysql_table_sina_finance, mysql_table_unfinish_sina_news
 
 from util.webHelper import get_requests
 from util.codeConvert import GetNowTime
@@ -26,13 +26,16 @@ import requests
 
 from db_config import engine
 
-def get_latest_news(col='43', date='2015-01-18', show_content=True):
+def get_latest_news(col='43', date='2015-01-18', page_start=1, page_end=100, show_content=True):
     """
         获取即时财经新闻
 
     Parameters
     --------
         top:数值，显示最新消息的条数，默认为80条
+        date: str, 查询日期
+        page_start: 起始页数
+        page_end:终止页数
         show_content:是否显示新闻内容，默认False
 
     Return
@@ -46,7 +49,7 @@ def get_latest_news(col='43', date='2015-01-18', show_content=True):
     """
     try:
         data_all = []
-        for page in range(1, 100):
+        for page in range(page_start, page_end):
             url = 'http://roll.news.sina.com.cn/interface/rollnews_ch_out_interface.php?col={_col}&spec=&type=&ch=03&date={date_}&k=&&offset_page=0&offset_num=0&num={count_}&asc=&page={page_}&r=0.{random_}'
             url = url.format(_col=col, date_ = date, count_=ct.PAGE_NUM[3], page_=page, random_=_random())
             print url
@@ -89,7 +92,7 @@ def get_latest_news(col='43', date='2015-01-18', show_content=True):
         return df
     except Exception as er:
         df_er = pd.DataFrame([('sina_news', GetNowTime(), url)], columns=['site','date_occur','url'])
-        df_er.to_sql('unfinish_sina_news_timeout', engine, if_exists='append')
+        df_er.to_sql(mysql_table_unfinish_sina_news, engine, if_exists='append')
         print(str(er))
 
 
@@ -186,6 +189,39 @@ def _random(n=16):
     end = (10 ** n) - 1
     return str(randint(start, end))
 
+def run_unfinish_news_list():
+    """
+    重新获取抓取失败的新闻列表
+    :return:
+    """
+    sql = 'select * from {_table}'.format(_table=mysql_table_unfinish_sina_news)
+    df = pd.read_sql(sql, engine)
+    for ix, row in df.iterrows():
+        url = row['url']
+        print url
+        result = re.findall(r'col=([\w,]+).*?&date=([\d+-]+).*?&page=(\d+)', url)
+        if len(result):
+            col = result[0][0]
+            date_s = result[0][1]
+            page_count = int(result[0][2])
+
+            get_latest_news(col=col, date=date_s, page_start=page_count)
+
+def run_unfinish_content_is_null():
+    """
+    重新获取内容空缺的文章
+    :return:
+    """
+    sql = 'select classify, url from {_table} where length(content)=0 limit 10'.format(_table=mysql_table_sina_finance)
+    df = pd.read_sql(sql, engine)
+    for ix, row in df.iterrows():
+        content = _latest_content_by_beautifulsoup(row['url'])
+        if content:
+            sql = 'update {0} set content= "{1}" where classify="{2}" and url="{3}"'.format(mysql_table_sina_finance, content, row['classify'], row['url'])
+            print sql
+            engine.execute(sql)
+
+
 def run_finance_news():
     #获取近三年的财经资讯
     df_date = pd.date_range('2013-01-01', '2013-12-31')
@@ -209,6 +245,6 @@ if __name__ == "__main__":
     #url = 'http://video.sina.com.cn/p/finance/china/20151124/160565135995.html '
     #_latest_content_by_beautifulsoup(url, True)
     #run_finance_news()
-    run_other_news()
-    #df = get_latest_news(date='2016-01-01')
-    #print df
+    #run_other_news()
+    #run_unfinish_news_list()
+    run_unfinish_content_is_null()
