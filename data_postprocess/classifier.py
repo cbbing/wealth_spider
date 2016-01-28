@@ -12,17 +12,51 @@ import nltk
 
 from db_config import engine, mysql_table_sina_finance
 from data_preprocess.fenci import get_one_article_keys
+from util.helper import fn_timer
 
 engine_sqlite = create_engine('sqlite:///foo.db')
 
+@fn_timer
 def train_classifier():
-    df = pd.read_sql("select classify, tags from {}".format(mysql_table_sina_finance+"50000"), engine_sqlite)
+    df = pd.read_sql("select classify, tags, title, content from {}".format(mysql_table_sina_finance+"200000"), engine_sqlite)
     values = df.get_values()
-    featuresets = [(key_features(tag), classify) for classify, tag in values]
-    train_set, test_set = featuresets[:900], featuresets[900:]
-    classifier = nltk.NaiveBayesClassifier.train(train_set)
-    print nltk.classify.accuracy(classifier, test_set)
+    #featuresets = [(key_features(tag), classify) for classify, tag, _, _ in values]
+    #train_set, test_set = featuresets[:180000], featuresets[180000:]
 
+    train_set, test_set = [], []
+
+    filename = 'Data/classifier.pkl'
+    if not os.path.exists(filename):
+        classifier = nltk.NaiveBayesClassifier.train(train_set)
+
+        with open(filename, 'wb') as f:
+            cPickle.dump(classifier, f)
+    else:
+        with open(filename, 'rb') as f:
+            classifier = cPickle.load(f)
+
+    #print nltk.classify.accuracy(classifier, test_set)
+    errors = []
+
+    # for classify, tag in test_set:
+    #     guess = classifier.classify(key_features(tag))
+    #     if guess != classify:
+    #         errors.append((classify, guess,tag))
+    # df = pd.DataFrame(errors, columns=[u'类别',u'预测',u'标签'])
+    print 'test_len',len(values[180000:])
+    for (classify, tag, title, _) in values[180000:]:
+        guess = classifier.classify(key_features(tag))
+        if guess != classify:
+            errors.append((classify, guess, title, tag))
+
+    print 'error_len',len(errors)
+    df = pd.DataFrame(errors, columns=[u'类别',u'预测',u'标题',u'标签'])
+    df.to_csv('Data/errors.csv')
+    with pd.ExcelWriter('Data/errors.xlsx') as writer:
+        df.to_excel(writer, sheet_name='Sheet1', index=True)
+
+    # for (classify, guess, title) in errors:
+    #     print 'correct={:>8} guess={:>8} title={:>30}'.format(classify, guess, title)
 
 def key_features(tags_content):
     tags = tags_content.split(',')
@@ -40,7 +74,8 @@ def data_preprocess():
         print e
         df = pd.DataFrame()
     if len(df)== 0:
-        df = cPickle.load(file('Data/df_all.pkl', 'rb'))
+        #df = cPickle.load(file('Data/df_all.pkl', 'rb'))
+        df = pd.read_sql("select * from {} limit 200000".format(mysql_table_sina_finance), engine)
         #df = pd.read_sql_table(mysql_table_sina_finance, engine)
         print 'before len:{}'.format(len(df))
         df = df[df['content'].apply(lambda x : (not x is None and len(x)) > 0)]
@@ -53,7 +88,7 @@ def data_preprocess():
     print df.head()
     df.sort_index(by='time', ascending=True, inplace=True)
 
-    df = df[:50000]
+    df = df[:200000]
     print df.head()
 
     t0 = time.time()
@@ -77,10 +112,10 @@ def data_preprocess():
     print 'time pass:{:.3f}'.format(t1-t0)
     df['tags'] = results
 
-    df.to_sql(mysql_table_sina_finance+"50000", engine_sqlite, if_exists='replace')
+    df.to_sql(mysql_table_sina_finance+"200000", engine_sqlite, if_exists='replace')
 
 
 
 if __name__ == "__main__":
-    data_preprocess()
+    #data_preprocess()
     train_classifier()
