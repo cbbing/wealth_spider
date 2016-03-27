@@ -15,7 +15,7 @@ for ix, row in df_user.iterrows():
     name_to_id[row['name']]=row['id']
 print name_to_id
 
-df = pd.read_excel('Data/20160301.xls', sheetname=u'异常统计',skiprows=[0,1])
+df = pd.read_excel('Data/20160325.xls', sheetname=u'异常统计',skiprows=[0,1])
 df = df.rename(columns={u'第一时段':u'上班', u'Unnamed: 5':u"下班"})
 
 # print df.columns
@@ -39,9 +39,18 @@ df[u'上班'] = df[u'上班'].apply(lambda x : int(x.split(":")[0]) *60 + int(x.
 df[u'下班'] = df[u'下班'].apply(lambda x : int(x.split(":")[0]) *60 + int(x.split(":")[1]))
 print df
 for ix, row in df.iterrows():
-    if df.ix[ix, u'上班'] > 8*60+30 and df.ix[ix, u'下班'] > 18*60+30:
-        df.ix[ix, u'上班'] -= 60
-        df.ix[ix, u'下班'] -= 60
+    print df.ix[ix, u'日期']
+    print row
+    if df.ix[ix, u'日期'] < '2016-03-14':
+        if df.ix[ix, u'上班'] > 8*60+30 and df.ix[ix, u'下班'] > 18*60+30:
+            df.ix[ix, u'上班'] -= 60
+            df.ix[ix, u'下班'] -= 60
+    else:
+        if df.ix[ix, u'上班'] > 8*60+30:
+            df.ix[ix, u'上班'] -= 30
+            if df.ix[ix, u'下班'] > 8*60+30:
+                df.ix[ix, u'下班'] -= 30
+
     if df.ix[ix, u'上班'] > 8*60+30 and df.ix[ix, u'上班'] < 8*60+36:
         df.ix[ix, u'上班'] -= 5
 
