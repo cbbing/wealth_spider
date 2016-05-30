@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>标准中国地图（带省会）</title>
+    <link rel="stylesheet" type="text/css" href="https://as.alipayobjects.com/g/datavis/g2-static/0.0.8/doc.css" />
+    <!--如果不需要jquery ajax 则可以不引入-->
+    <script src="https://a.alipayobjects.com/jquery/jquery/1.11.1/jquery.js"></script>
+    <script src="https://a.alipayobjects.com/alipay-request/3.0.3/index.js"></script>
+    <!-- 引入 G2 脚本 -->
+    <script src="https://as.alipayobjects.com/g/datavis/g2/1.2.2/index.js"></script>
+  </head>
+  <body>
+    <div id="c1"></div>
+    <!-- G2 code start -->
+    <script>
+      $.getJSON('https://raw.githubusercontent.com/antvis/resource/master/geo/china.json', function(mapData) {
+        var Stat = G2.Stat;
+        var userData = python_userData;
+
+        var chart = new G2.Chart({
+          id: 'c1',
+          width: 1000,
+          height: 500,
+          plotCfg: {
+            margin: [30, 200]
+          }
+        });
+        chart.source(userData);
+        chart.axis(false);
+        chart.polygon().position(Stat.map.region('name', mapData)).color('value');
+        chart.point().position(Stat.map.center('name', mapData))
+          .color('#fff')
+          .label('name', {offset: 0, label: {fill: '#000', 'font-size': 10}})
+          .size(0);
+        chart.render();
+      });
+    </script>
+    <!-- G2 code end -->
+  </body>
+</html>
